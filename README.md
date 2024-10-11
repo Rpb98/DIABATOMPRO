@@ -196,7 +196,7 @@ After running the above function, a diabatic representation of your input adiaba
 
 * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
-$$\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}$$
+$$ |\psi^{\rm(d)}_i\rangle=\sum^N_j\mathcal{C}_{ij}|\psi^{\rm(a)}_j\rangle$$
 
 * `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
