@@ -176,7 +176,7 @@ After installing the package, here's an example of how to run the main function:
 using DIABATOMPRO
 
 # Example of using the main function
-U, Adiabatic_Objects, Diabatic_Objects, Diabatic_Basis, Hamiltonian =  = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
+U, Adiabatic_Objects, Diabatic_Objects, Diabatic_Basis, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
 ```
 After running the above function, a diabatic representation of your input adiabatic system should be computed. Please see a comprehensive guide below for more details. The function has the following inpit & output syntax:
 
@@ -195,11 +195,12 @@ After running the above function, a diabatic representation of your input adiaba
 * `Diabatic_Objects` : a dictionary of diabatic property matrices, each of shape 
 
 * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
+
+<!-- $$\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}$$ -->
+
 <p align="center">
   <img src="https://www.sciweavers.org/download/Tex2Img_1728729464.jpg" alt="equation" />
 </p>
-
-
 
 * `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
@@ -253,10 +254,15 @@ end
     
 * `regularisation` - the molecular property used in the regularisation procedure provoked by the `diabatisation evolution` card who's diabatic representation will be made smoot. This can be any object of the following: `potential`, `dipole`, `spin-orbit`, `lx`. 
 
-* `grid_resolution` - parameter specifying the coursness of the grid used in solution of the AtDT through evolution. It gives the order of magnitude in grid point seperation. This grid usually needs to be very dense for an accurate solution to the AtDT ($\sim10^{-5}\:\rm\AA$) and would be inefficient/cumbersome to define a grid in the `grid` block with such a small grid seperation. The AtDT is then splined onto the global grid defined in the `grid` block.
+* `grid_resolution` - parameter specifying the coursness of the grid used in solution of the AtDT through evolution. It gives the order of magnitude in grid point seperation. This grid usually needs to be very dense for an accurate solution to the AtDT ($\sim10^{-5}$ Å) and would be inefficient/cumbersome to define a grid in the `grid` block with such a small grid seperation. The AtDT is then splined onto the global grid defined in the `grid` block.
 
-* `r_boundary_condition` / `l_boundary_condition` - the matrix elements of the desired boundary values of the AtDT. **r** means the long bond length (or 'right') boundary and **l** means the short bond length (or 'left') boundary. The matrix elements are listed with space delimiters, counting left/right and top/down, for example a $3\times3$ matrix would have elements listed as $M_{11},\;M_{12},\;M_{13},\;M_{21},\;M_{22},\;M_{23},\;M_{31},\;M_{32},\;M_{33}$. e.g. `0 0 -1 1 0 0 0 -1 0` as in the example would yield the following matrix:
-$$\begin{pmatrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{pmatrix}$$
+* `r_boundary_condition` / `l_boundary_condition` - the matrix elements of the desired boundary values of the AtDT. **r** means the long bond length (or 'right') boundary and **l** means the short bond length (or 'left') boundary. The matrix elements are listed with space delimiters, counting left/right and top/down, for example a $3\times3$ matrix would have elements listed as $M_{11}$, $M_{12}$, $M_{13}$, $M_{21}$, $M_{22}$, $M_{23}$, $M_{31}$, $M_{32}$, $M_{33}$. e.g. `0 0 -1 1 0 0 0 -1 0` as in the example would yield the following matrix:
+<!-- $$\begin{pmatrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{pmatrix}$$ -->
+
+<p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728730494.jpg" alt="equation" />
+</p>
+
 
 #### The Save Block
 The results of the diabatisation can be saved in different formats, and are specified via the following block:
@@ -311,7 +317,7 @@ end
 
 * `type` - is the functional type of the input object. Currently, grid representation is suitable for defining complex adiabatic potentials, and so one should use `type`. In principle one can use functional forms, but this feature and its uses (fitting & modelling adiabatic potentials using diabatic potentials and couplings) are in development. 
 
-* `units` - the units of the bond length then potential. All curves are converted to $\rm \AA$ and $\rm cm^{-1}$. See `units` on the possible conversions currently available.
+* `units` - the units of the bond length then potential. All curves are converted to Å and $\rm cm^{-1}$. See `units` on the possible conversions currently available.
 
 * `values` - begins the grid/function parameter block. After this, space delimited columns represent the bond length vs. potential.
 
@@ -357,11 +363,15 @@ end
 
 * `type` - the functional type of the NAC input to the program. It can take the following entries:
 
-`grid` - grid representation of the NAC, given by two columns of bond length ($\rm \AA$) versus NAC ($\rm \AA^{-1}$) in the `values` block (see potentials for an example of a grid input).
+`grid` - grid representation of the NAC, given by two columns of bond length (Å) versus NAC (1/Å) in the `values` block (see potentials for an example of a grid input).
 
 `lorentzian` - a lorentzian profile is used to model the NAC, and is often used for its cusp-like shape. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
-  $$f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2},$$
+  <!-- $$f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2},$$ -->
+<p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728735700.jpg" alt="equation" />
+</p>
+
 
 and enters the input file via the following:
 ```
@@ -383,7 +393,11 @@ end
 
 `laplacian` - a laplacian profile is used to model the NAC, and is desireable for its cusp-like shape. Typically it overestimates the NAC at the peak and underestimates the NAC in the wings. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
- $$f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),$$
+ <!-- $$f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),$$ -->
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728735778.jpg" alt="equation" />
+</p>
 
 and enters the input file via the following:
 ```
@@ -405,7 +419,12 @@ end
 
 `gaussian` - a gaussian profile is used to model the NAC. It is parameterised by the width, $\gamma$, the peak position, $r_0$, and amplitude $N$. It is programmed as:
 
-$$f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),$$
+<!-- $$f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),$$ -->
+
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728735816.jpg" alt="equation" />
+</p>
 
 and enters the input file via the following:
 ```
@@ -428,11 +447,11 @@ end
 $$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$
 
 where the mixing angle between states $i$ and $j$, $\beta^{\rm avg}_{ij}$, is
-$$\beta^{\rm avg}_{ij} = \frac{1}{2}\sin^{-1}\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$
+$$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$
 
 where the lorentzian and laplacian mixing angles are
 
-$$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\tan^{-1}\left(\frac{r-r_0}{\gamma}\right)$$
+$$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
 $$\beta^{\rm la}_{ij}=\begin{cases} 
 \frac{\pi}{4}\exp(\frac{r-r_0}{\delta}) & \text{if } r < r_0, \\
 \frac{\pi}{4} & \text{if } r = r_0, \\
@@ -571,7 +590,7 @@ end
 
 * `type` - the functional type of the dipole input to the program. It can take the following entries:
 
-`grid` : grid representation of the dipole, given by two columns of bond length ($\rm \AA$) versus dipole (Debye) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
+`grid` : grid representation of the dipole, given by two columns of bond length (Å) versus dipole (Debye) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
 
 <!-- `polynom_decay_24` : -->
 
@@ -607,7 +626,7 @@ end
 
 * `type` - the functional type of the spin-orbit input to the program. It can take the following entries:
 
-`grid` : grid representation of the spin-orbit coupling, given by two columns of bond length ($\rm \AA$) versus spin-orbit ($\rm cm^{-1}$) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
+`grid` : grid representation of the spin-orbit coupling, given by two columns of bond length (Å) versus spin-orbit ($\rm cm^{-1}$) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
 
 <!-- `polynom_decay_24` : -->
 
@@ -642,7 +661,7 @@ end
 
 * `type` - the functional type of the EAM input to the program. It can take the following entries:
 
-`grid` : grid representation of the EAM, given by two columns of bond length ($\rm \AA$) versus EAM (units of $\hbar$) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
+`grid` : grid representation of the EAM, given by two columns of bond length (Å) versus EAM (units of $\hbar$) in the `values` block (see [potentials](#the-potential-block) for an example of a grid input).
 
 <!-- `polynom_decay_24` : -->
 
