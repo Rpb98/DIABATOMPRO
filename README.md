@@ -428,11 +428,11 @@ end
 $$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$
 
 where the mixing angle between states $i$ and $j$, $\beta^{\rm avg}_{ij}$, is
-$$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$
+$$\beta^{\rm avg}_{ij} = \frac{1}{2}\sin^{-1}\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$
 
 where the lorentzian and laplacian mixing angles are
 
-$$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
+$$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\tan^{-1}\left(\frac{r-r_0}{\gamma}\right)$$
 $$\beta^{\rm la}_{ij}=\begin{cases} 
 \frac{\pi}{4}\exp(\frac{r-r_0}{\delta}) & \text{if } r < r_0, \\
 \frac{\pi}{4} & \text{if } r = r_0, \\
