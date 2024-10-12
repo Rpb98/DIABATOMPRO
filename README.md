@@ -444,20 +444,36 @@ end
 
 `lor_lap` - the geometric average of a lorentzian and laplacian mixing angle (cumulative distribution function) is used to model the NAC ([see here for details](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp03051a)). It is parameterised by two widths, $\gamma$ & $\delta$, the peak position, $r_0$, and is normalised to unit area. It is programmed as:
 
-$$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$
+<!-- $$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$ -->
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751210.jpg" alt="equation" />
+</p>
 
 where the mixing angle between states $i$ and $j$, $\beta^{\rm avg}_{ij}$, is
-$$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$
+
+<!-- $$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$ -->
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751280.jpg" alt="equation" />
+</p>
 
 where the lorentzian and laplacian mixing angles are
 
-$$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
+<!-- $$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
 $$\beta^{\rm la}_{ij}=\begin{cases} 
 \frac{\pi}{4}\exp(\frac{r-r_0}{\delta}) & \text{if } r < r_0, \\
 \frac{\pi}{4} & \text{if } r = r_0, \\
 \frac{\pi}{2}-\frac{\pi}{4}\exp(-\frac{r-r_0}{\delta}) & \text{if } r > r_0.
-\end{cases}$$
+\end{cases}$$ -->
 
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751389.jpg" alt="equation" />
+</p>
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751415.jpg" alt="equation" />
+</p>
 where the maximal overlap of the lorentzian and laplacian function is ensured when
 
 $$\delta = 1.397\times \gamma$$
@@ -484,11 +500,19 @@ sub-types f1 f2
 ```
 In this case the two functions $f_1$ and $f_2$ are mixed in the following linear combination
 
-$$f = mf_2 + (1-m)f_1$$
+<!-- $$f = mf_2 + (1-m)f_1$$ -->
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751530.jpg" alt="equation" />
+</p>
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$ and $f_2$ are allowed to be any programmed function, and share the same peak position $r_0$, width $\gamma$, and amplitude $N$. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
-$$\gamma(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},$$
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751599.jpg" alt="equation" />
+</p>
+
+<!-- $$\gamma(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))}$$ -->
 
 meaning at the crossing point the width parameter reduces to a reference width $\gamma_0$. $a>0$ will give the function a long tail left of the peak, $a<0$ will give the function a long tail right of the peak, and $a=0$ makes the function symmetric about $r_0$. 
 
@@ -519,11 +543,18 @@ sub-types f1 f2 f3
 ```
 In this case the two functions $f_1$ and $f_2$ are mixed in the following linear combination and perturbation by $f_3$
 
-$$f(r;r_0,\tilde{\gamma},N) = mf_2(r;r_0,\tilde{\gamma},N)+ (1-m)f_1(r;r_0,\tilde{\gamma},N)+\sum^n_if_3(r;r_{0,i},\gamma_{0,i},N_{0,i})$$
+<!-- $$f(r;r_0,\tilde{\gamma},N) = mf_2(r;r_0,\tilde{\gamma},N)+ (1-m)f_1(r;r_0,\tilde{\gamma},N)+\sum^n_if_3(r;r_{0,i},\gamma_{0,i},N_{0,i})$$ -->
+
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751637.jpg" alt="equation" />
+</p>
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$, $f_2$, and $f_3$ are allowed to be any programmed function, and share the same peak position and width. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
-$$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},$$
+<!-- $$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},$$ -->
+ <p align="center">
+  <img src="https://www.sciweavers.org/download/Tex2Img_1728751599.jpg" alt="equation" />
+</p>
 
 meaning at the crossing point the width parameter reduces to a reference width $\gamma_0$. $a>0$ will give the function a long tail left of the peak, $a<0$ will give the function a long tail right of the peak, and $a=0$ makes the function symmetric about $r_0$. 
 
