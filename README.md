@@ -196,7 +196,7 @@ After running the above function, a diabatic representation of your input adiaba
 
 * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
-![equation](https://www.sciweavers.org/download/Tex2Img_1728728825.jpg)
+![equation](https://www.sciweavers.org/download/Tex2Img_1728729378.jpg)
 
 * `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
