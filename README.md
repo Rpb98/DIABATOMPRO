@@ -578,12 +578,12 @@ values
     gp      0.0300       (first perturbing function)
     r0p     1.0300                   .
     Np      0.0130                   .
-	gp  	0.0150       (second perturbing function)
-	r0p 	1.0970                   .
-	Np  	0.0065                   .
-	gp  	0.0150       (third perturbing function)
-    r0p 	1.1400                   .
-    Np  	0.0035                   .
+    gp      0.0150       (second perturbing function)
+    r0p     1.0970                   .
+    Np      0.0065                   .
+    gp      0.0150       (third perturbing function)
+    r0p     1.1400                   .
+    Np      0.0035                   .
     .       .                        .
     .       .                        .
     .       .                        .
