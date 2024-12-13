@@ -67,7 +67,7 @@ struct DM
 end
 #
 ## Create the NAC class
-struct NAC
+mutable struct NAC
     ID                :: Array{Int}
     name              :: String
     obj_type          :: String
@@ -82,6 +82,21 @@ struct NAC
     fit               :: Array{Int}
     bounds            :: Array{Any}
     fitted_parameters :: Array{Any}
+    fit_range         :: Tuple{Number,Number}
+end
+#
+## Create a switching function class
+mutable struct SWITCH
+    ID                :: Array{Int}
+    obj_type          :: String
+    type              :: String
+    sub_type          :: Tuple{String,String,String}
+    Lval              :: Array{Any}
+    Rval              :: Array{Any}
+    fit               :: Array{Int}
+    bounds            :: Array{Any}
+    fitted_parameters :: Array{Any}
+    fit_range         :: Tuple{Number,Number}
 end
 #
 ## Create a grid class
@@ -105,6 +120,7 @@ struct Method
     regularisation       :: Any
     plot                 :: Bool
     shift                :: Bool
+    abinitio_fit         :: Bool
 end
 #
 ## create a diabatisation save class

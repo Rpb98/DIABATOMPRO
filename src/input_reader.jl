@@ -35,12 +35,16 @@ SpinOrbit            = Dict{Any, Any}()
 EAMC                 = Dict{Any, Any}()
 Dipole               = Dict{Any, Any}()
 NonAdiabaticCoupling = Dict{Any, Any}()
+SwitchingFunction    = Dict{Any, Any}()
 #
 ## Intitialise the Calculation dictionary which defines hyper parameters
 Calculation          = Dict{String, Any}()
 #
+## ab initio classes
+abinitio = Dict{Any, Any}()
+#
 ## make the Hamiltonians global quantities
-global Hamiltonian, Potential, SpinOrbit, EAMC, Dipole, NonAdiabaticCoupling, Calculation
+global Hamiltonian, Potential, SpinOrbit, EAMC, Dipole, NonAdiabaticCoupling, Calculation, abinitio, SwitchingFunction
 #
 function process_line(line::String)::String
     #
@@ -63,7 +67,7 @@ function is_start_of_block(line::String, objects, read_flag::Bool)
     #
     if  (size(split(line))[1]!=0)
         return (any(occursin.(objects,lowercase(split(line)[1]))))&&
-            (read_flag==false)&(occursin("abinitio",lowercase(line))==false)
+            (read_flag==false)#&(occursin("abinitio",lowercase(line))==false)
     else
         return false
     end
@@ -104,9 +108,13 @@ function initialise_input_parameters(line::String)
     #
     input_values["grid_resolution"] = 0.0001
     #
-    input_values["save"] = false 
+    input_values["save"] = "false" 
     #
-    input_values["plot"] = false 
+    input_values["plot"] = "false"
+    #
+    input_values["abinitio_fit"] = "false"
+    #
+    input_values["fit_range"] = ("0","10")
     #
     ## save block
     input_values["as"] = "file"
@@ -241,7 +249,8 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                         input_values["r_boundary_condition"],
                         input_values["regularisation"],
                         parse.(Bool,input_values["plot"]),
-                        parse.(Bool,input_values["shift"])
+                        parse.(Bool,input_values["shift"]),
+                        parse.(Bool,input_values["abinitio_fit"])
                     )
         #
         Calculation["method"] = method
@@ -366,8 +375,13 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         return object, obj_type
     #
     ## 
-    elseif object_key == "NAC"                                          # NAC instance
+    elseif occursin("nac",lowercase(object_key))                                          # NAC instance
         obj_type = "NAC"
+        if occursin("abinitio",lowercase(object_key))
+            range = parse.(Float64,input_values["fit_range"])
+        else
+            range = Calculation["grid"].range 
+        end
         #
         ## if object has grid type, parse left column to floats (bonds
         if input_values["type"]=="grid"
@@ -387,11 +401,36 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                      input_values["Rval"],
                      input_values["fit"],
                      input_values["bounds"],
-                     input_values["Rval"]) 
+                     input_values["Rval"],
+                     range) 
         #
-        NonAdiabaticCoupling[object.ID]=object 
+        if occursin("abinitio",lowercase(object_key))
+            abinitio[(obj_type,object.ID)]=object 
+        else
+            NonAdiabaticCoupling[object.ID]=object 
+        end
         #
         return object, obj_type
+    elseif lowercase(object_key) == "switch"
+        obj_type = "switch"
+        #
+        ## if object has grid type, parse left column to floats (bonds
+        if input_values["type"]=="grid"
+            input_values["Lval"] = parse.(Float64,input_values["Lval"])
+        end
+        #
+        object = SWITCH(parse.(Int,input_values["id"]),
+                        "switch",
+                        input_values["type"],
+                        input_values["sub-types"],
+                        input_values["Lval"],
+                        input_values["Rval"],
+                        input_values["fit"],
+                        input_values["bounds"],
+                        input_values["Rval"],
+                        range) 
+        #
+        SwitchingFunction[object.ID]=object 
     end
 end
 #
@@ -547,7 +586,7 @@ function read_file(fname)
                     #
                     ## if the object block corresponded to a molecular property, 
                     ## insert its class instance into the Hamiltonian dictionary
-                    if (object_key != "grid")&(object_key != "method")              # populate Hamiltonian
+                    if (object_key != "grid")&(object_key != "method")&(occursin("abinitio",lowercase(object_key)) == false)              # populate Hamiltonian
                         Hamiltonian[(obj_type,object.ID)]=object
                     end
                     continue

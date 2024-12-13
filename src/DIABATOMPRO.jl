@@ -13,7 +13,6 @@ include("input_reader.jl")
 include("Diabatiser.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATOMPRO FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 export Diabatise
-
 #
 function Diabatise(fname; save_flag = false, special_name = "")
     #
@@ -61,7 +60,12 @@ function Diabatise(fname; save_flag = false, special_name = "")
     # diabatom["NonAdiabaticCoupling"] = NonAdiabaticCoupling
     #
     ## run the diabatiser
-    U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+    if Calculation["method"].abinitio_fit == true
+        fit_abinitio()
+        return nothing, nothing, nothing, nothing, nothing
+    elseif Calculation["method"].abinitio_fit == false
+        U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+    end
     #
     ## make a new Hamiltonian with different representations
     #

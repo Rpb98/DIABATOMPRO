@@ -464,7 +464,7 @@ function mix_perturbed(r, g0, r0, amp, a, m, ptrb_and_subtype_params...)
     #
     ## compute how many paerturbations
     N_ptrb = Int(length(p_ptrb)/3)
-    p_ptrb = reshape(p_ptrb,N_ptrb,:)
+    p_ptrb = reshape(p_ptrb,:,N_ptrb)
     #
     P = 0.0
     for idx=1:N_ptrb
@@ -735,29 +735,31 @@ function unitConversion(x, y, obj, units)
     #
     ## define an atomic unit standard for different objects
     unitStd = Dict()
-    unitStd["PEC"] = "Eh"
-    unitStd["SOC"] = "cm-1"
-    unitStd["DM"]  = "ea0"
-    unitStd["NAC"] = "Ang-1"
+    unitStd["pec"] = "eh"
+    unitStd["soc"] = "cm-1"
+    unitStd["dm"]  = "ea0"
+    unitStd["nac"] = "ang-1"
+    unitStd["lx"] = "cm-1"
     #
     ## define unit dictionary
     unitDict = Dict()
-    unitDict["Ang-1"]    =                       1
+    unitDict["ang-1"]    =                       1
     unitDict["cm-1"]     =                       1
     unitDict["angstrom"] =                       1
+    unitDict["debye"]    =                       1
     unitDict["bohr"]     =          0.529177210920
-    unitDict["Eh"]       =       219474.6313708000
+    unitDict["eh"]       =       219474.6313708000
     unitDict["ea0"]      =          2.541746363812
     unitDict["erg"]      =      5.034117008194E+15
-    unitDict["eV"]       =         8065.5442959967
-    unitDict["kCal/mol"] =          349.7550878997
-    unitDict["kJ/mol"]   =           83.5934722514
-    unitDict["THz"]      =           33.3564095198
-    unitDict["au"]       =  unitDict[unitStd[obj]]
+    unitDict["ev"]       =         8065.5442959967
+    unitDict["kcal/mol"] =          349.7550878997
+    unitDict["kj/mol"]   =           83.5934722514
+    unitDict["thz"]      =           33.3564095198
+    unitDict["au"]       =  unitDict[unitStd[lowercase(obj)]]
     #
     ## do the unit conversion
-    x = x.*unitDict[units[1]]
-    y = y.*unitDict[units[2]]
+    x = x.*unitDict[lowercase(units[1])]
+    y = y.*unitDict[lowercase(units[2])]
     #
     return x, y
 end
@@ -835,8 +837,99 @@ function Diabatic_Property_from_wavefunctions(bra, ket, adiMat)
     #
     return Pd_ij
 end
-
-
+#
+function fit_abinitio()
+    function get_loss_general(x_ai, y_ai, Lval, units, obj_type, sub_type, factor, f, fixParams, p_init, p_bounds, p)
+        #
+        for (i,par) in enumerate(p)
+                if fixParams[i] == 0.0
+                        p[i] = p_init[i]
+                else
+                        p[i] = par #round(par, sigdigits=6)
+                        #
+                        if (p[i]<p_bounds[i][1])|(p[i]>p_bounds[i][2])
+                                return 1e100
+                        end
+                end
+        end
+        #
+        ## compute curve with new parameters
+        x, y = ComputeProperty_viaParameters(x_ai, f, Lval, p, obj_type, units, sub_type, factor)
+        #
+        ## compute RMSE
+        diff = y .- y_ai
+        RMSE = sqrt(sum(diff.^2)/length(diff))
+        #
+        return round(RMSE, sigdigits=6)
+    end
+    #
+    options = Optim.Options(show_trace = true)
+    for key in keys(abinitio)
+        #
+        bra_state = key[2][1]
+        ket_state = key[2][2]
+        #
+        if (bra_state in Calculation["method"].states)&(ket_state in Calculation["method"].states)
+            fitting_object = Hamiltonian[key]
+            #
+            x_ai = abinitio[key].Lval
+            y_ai = abinitio[key].Rval
+            #
+            ## make mask for fitting region
+            xi = abinitio[key].fit_range[1]
+            xf = abinitio[key].fit_range[2]
+            mask = (xi .< x_ai .< xf)
+            #
+            ## 
+            x_ai = x_ai[mask]
+            y_ai = y_ai[mask]
+            #
+            ## bra and ket labels
+            i = floor(Int64, key[2][1])
+            j = floor(Int64, key[2][2])
+            #
+            ## extract fitting flags, i.e. turn of parameter variation in fit
+            p_excludeFromFit = fitting_object.fit
+            #
+            ## extract guesses for parameters
+            p_guess = fitting_object.Rval
+            p = deepcopy(p_guess)
+            #
+            ## determine the functional form to fit
+            func = fitting_object.type
+            #
+            ## extract parameter bounds
+            p_bounds = fitting_object.bounds
+            #
+            ## obtain parameters for the ComputePropert_viaParameters function
+            Lval     = fitting_object.Lval
+            units    = fitting_object.units
+            sub_type = fitting_object.sub_type
+            factor   = fitting_object.factor
+            #
+            ## if no parameters are to be fit then skip fitting step
+            if (any(p_excludeFromFit .== 1))
+                    #
+                    ## perform optimization
+                    o_ = optimize(p -> get_loss_general(x_ai, y_ai, Lval, units, key[1], sub_type, factor, func, p_excludeFromFit, p_guess, p_bounds, p), [p_guess...], options) 
+                    p = Optim.minimizer(o_)
+                    fitting_object.fitted_parameters = p
+                    println(p)
+            end
+            #
+            ## compute fitted curve
+            x, fitted_object = ComputeProperty_viaParameters(r, func, Lval, p, key[1], units, sub_type, factor)
+            #
+            ## plot fitted curve
+            plt.figure()
+            plt.title("<"*string(i)*"|"*key[1]*"|"*string(j)*">")
+            plt.plot(x_ai, y_ai, label = "abinitio")
+            plt.plot(x, fitted_object, label = "fitted")
+            plt.xlim(x[1],x[end])
+            plt.legend()
+        end
+    end
+end
 
 
 

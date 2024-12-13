@@ -1114,7 +1114,7 @@ function run_diabatiser(diabMethod)
             #
             Diabatic_Objects["potential"] = Diabatic_PropMat
         else
-            Adiabatic_PropMat = Objects[p]
+            Adiabatic_PropMat = Objects[lowercase(p)]
             #
             Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
             #
