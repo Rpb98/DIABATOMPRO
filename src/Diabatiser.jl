@@ -192,26 +192,116 @@ end
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATISING ROUTINES  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 ## 2-state approximation
+# function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
+#         options = Optim.Options(show_trace = true)
+#         #
+#         D  = Int(size(a)[2])
+#         #
+#         ## initialise the adiabatic to diabatic transformation
+#         U = zeros(Float64, size(a)[1], D, D)
+#         #
+#         for i=1:D
+#                 U[:,i,i] .= 1.0
+#         end
+#         #
+#         ## loop over different NACs
+#         xidx = 0
+#         for key in keys(NonAdiabaticCoupling)
+#                 xidx +=1
+#                 #
+#                 ## bra and ket labels
+#                 i = floor(Int64, key[1])
+#                 j = floor(Int64, key[2])
+#                 #
+#                 display_progress(i,j, 16, xidx, length(keys(NonAdiabaticCoupling)))
+#                 print("\n")
+#                 #
+#                 ## extract fitting flags, i.e. turn of parameter variation in fit
+#                 p_excludeFromFit = NonAdiabaticCoupling[key].fit
+#                 #
+#                 ## extract guesses for parameters
+#                 p_guess = NonAdiabaticCoupling[key].Rval
+#                 #
+#                 ## determine the functional form to fit
+#                 func = NonAdiabaticCoupling[key].type
+#                 #
+#                 ## Generate 2x2 problem
+#                 a_tmp = Array{Float64}(undef, size(a)[1],2,2) 
+#                 for k=1:size(a)[1]
+#                         a_tmp[k,:,:] = Diagonal(Array([a[k,i,i],a[k,j,j]])) 
+#                 end
+#                 a_tmp = [a_tmp[idx,:,:] for idx=1:lastindex(r)]
+#                 #
+#                 ## optimise NAC parameters to create the smoothest PECs for states i,j
+#                 f = func
+#                 p =  p_guess
+#                 #
+#                 ##
+#                 mixing_angle_ij = compute_mixing_angle(r, f, key, p)
+#                 #
+#                 c = cos.(mixing_angle_ij)
+#                 s = sin.(mixing_angle_ij)
+#                 #
+#                 U[:,i,i] .= c
+#                 U[:,j,j] .= c
+#                 U[:,i,j] .= -s
+#                 U[:,j,i] .= s
+#                 #
+#                 ## if no parameters are to be fit then skip fitting step
+#                 if (any(p_excludeFromFit .== 1))&(check_symmetry_and_states(i,j))
+#                         #
+#                         ## extract parameter bounds
+#                         p_bounds = NonAdiabaticCoupling[key].bounds
+#                         #
+#                         ## obtain parameters for the ComputePropert_viaParameters function
+#                         Lval = NonAdiabaticCoupling[key].Lval
+#                         units = NonAdiabaticCoupling[key].units
+#                         sub_type = NonAdiabaticCoupling[key].sub_type
+#                         factor = NonAdiabaticCoupling[key].factor
+#                         #
+#                         ## perform optimization
+#                         o_ = optimize(p -> get_loss(r, Lval, units, sub_type, factor, a_tmp, func, p_excludeFromFit, p_guess, p_bounds, p), [p_guess...],options) 
+#                         optimisedParameters = Optim.minimizer(o_)
+#                         #
+#                         NonAdiabaticCoupling[key].fitted_parameters .= optimisedParameters
+#                         #
+#                         ## compute mixing angles
+#                         mixing_angle_ij = compute_mixing_angle(r,f,key,optimisedParameters)
+#                         #
+#                         c = cos.(mixing_angle)
+#                         s = sin.(mixing_angle)
+#                         #
+#                         U[:,i,i] .= c
+#                         U[:,j,j] .= c
+#                         U[:,i,j] .= -s
+#                         U[:,j,i] .= s
+#                 end
+#         end
+#         #
+#         return U
+# end
 function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
-        options = Optim.Options(show_trace = true)
-        #
-        D  = Int(size(a)[2])
-        #
-        ## initialise the adiabatic to diabatic transformation
-        U = zeros(Float64, size(a)[1], D, D)
-        #
-        for i=1:D
-                U[:,i,i] .= 1.0
-        end
-        #
-        ## loop over different NACs
-        xidx = 0
-        for key in keys(NonAdiabaticCoupling)
-                xidx +=1
-                #
-                ## bra and ket labels
-                i = floor(Int64, key[1])
-                j = floor(Int64, key[2])
+    options = Optim.Options(show_trace = true)
+    #
+    D  = Int(size(a)[2])
+    #
+    ## initialise the adiabatic to diabatic transformation
+    U = zeros(Float64, size(a)[1], D, D)
+    #
+    for i=1:D
+            U[:,i,i] .= 1.0
+    end
+    #
+    ## loop over different NACs
+    xidx = 0
+    for key in keys(NonAdiabaticCoupling)
+            xidx +=1
+            #
+            ## bra and ket labels
+            i = floor(Int64, key[1])
+            j = floor(Int64, key[2])
+            #
+            if (i in Calculation["method"].states)&(j in Calculation["method"].states)
                 #
                 display_progress(i,j, 16, xidx, length(keys(NonAdiabaticCoupling)))
                 print("\n")
@@ -268,17 +358,18 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                         ## compute mixing angles
                         mixing_angle_ij = compute_mixing_angle(r,f,key,optimisedParameters)
                         #
-                        c = cos.(mixing_angle)
-                        s = sin.(mixing_angle)
+                        c = cos.(mixing_angle_ij)
+                        s = sin.(mixing_angle_ij)
                         #
                         U[:,i,i] .= c
                         U[:,j,j] .= c
                         U[:,i,j] .= -s
                         U[:,j,i] .= s
                 end
-        end
-        #
-        return U
+            end
+    end
+    #
+    return U
 end
 #
 ## N-state
@@ -744,8 +835,8 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
             ## compute HWHM of this for fitting range
             deriv_∂Kij_peak   = maximum(abs.(deriv_∂Kij))
             # println(deriv_∂Kij_peak,deriv_∂Kij)
-            # plt.figure()
-            # plt.plot(r,∂Kij)
+            plt.figure()
+            plt.plot(r,deriv_∂Kij)
             #
             HWHM_end_idx   = ij_peak_idx + (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in deriv_∂Kij[ij_peak_idx:end]]) - 1) - 1
             HWHM_start_idx = length(reverse(∂Kij[1:ij_peak_idx])) - (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in reverse(deriv_∂Kij[1:ij_peak_idx]) ]) - 1) + 1

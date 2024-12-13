@@ -1,13 +1,13 @@
 grid                
   npoints 2001
-  range   1 20   
+  range   3.4 20   
   interpolation_type  cubic
 end
 
 method   
     atoms 39K 1H             
     states 1 2 3
-	diabatisation forward-evolution
+	diabatisation evolution
 	regularisation potential
 	grid_resolution 0.0001
 	r_boundary_condition 0 -1 0 0 0 -1 1 0 0
@@ -28525,83 +28525,39 @@ end
 
 (--- NACs ---)
 
-sigmoid_variable_gamma
-
-switch 1 2
-type lorentzian
-values 
-    gamma        1.7562989613094162
-    r0           4.17873011028104
-    N           -1.0
-end
-
 
 NAC 1 2
 name <1|d/dr|2>
 spin 0.0 0.0
 sigma 0.0 0.0
 lambda 0 0
-type sigmoid_polynom_decay_24
+type mix
+sub-types lorentzian gaussian
 factor 1.0
 values 
-    gamma0       1.7562989613094162
-    r0           4.17873011028104
-	p			 4
-	beta2
-	beta4
-	Binf
-	b0
-	b1
-	b2
-	b3
+    gamma        0.9371473263971835
+    r0           4.456011198840352
+    N           -0.6111593464619554
+	a			-0.25233621334143275
+	m            0.6093363159122573
 end
+
 
 NAC 2 3
 name <1|d/dr|2>
 spin 0.0 0.0
 sigma 0.0 0.0
 lambda 0 0
-type lorentzian
+type mix
+sub-types lorentzian gaussian
 factor 1.0
 values 
-    gamma      1.1917178953072
-    r0         7.7
-    N          1.0
+    gamma       1.1600815522094097
+    r0           7.205545951145156
+    N            0.6085952197955011
+	a           -0.27757178169903146 
+	m            1.1859318733710822
 end
-
-
-
-(NAC 1 2)
-(name <1|d/dr|2>)
-(spin 0.0 0.0)
-(sigma 0.0 0.0)
-(lambda 0 0)
-(type mix_perturbed)
-(sub-types lorentzian gaussian lorentzian)
-(factor 1.0)
-(values )
-(    gamma  187.07365814256258)
-(    r0     7.955678690262196)
-(    N      -4.789590681915475)
-(    a      -1.2570193888378254)
-(    m      -1.2965884797766566e-7)
-(	gp     0.35785789701607806)
-(	r0p    1.1208219593787188)
-(	Np     0.0 (0.7157469405174186))
-(end)
-
-
-
-(values )
-(    gamma  149.8541667877194)
-(    r0     7.8531504358464685)
-(    N      -4.876179671816635)
-(    a      -1.224402275817884)
-(    m      -2.775901304146352e-6)
-(	gp     0.35785789701607806)
-(	r0p    1.1208219593787188)
-(	Np     0.7157469405174186)
-(end)
 
 
 NAC 1 3
@@ -28611,7 +28567,7 @@ sigma 0.0 0.0
 lambda 0 0
 type mix_perturbed
 sub-types lorentzian gaussian gaussian
-factor 0.0
+factor 1.0
 values 
     gamma     0.66207160282504770
     r0        1.67821259197581880
@@ -28625,25 +28581,6 @@ values
 	r0p       3.49194552926931000
 	Np        0.28891354742266570
 end
-
-(NAC 2 3)
-(name <2|d/dr|3>)
-(spin 0.0 0.0)
-(sigma 0.0 0.0)
-(lambda 0 0)
-(type mix_perturbed)
-(sub-types lorentzian gaussian gaussian)
-(factor 0.0)
-(values )
-    gamma 1.275598166388463
-    r0    6.976712175479599
-    N     0.7654942540438867
-    a     0.05898288061761396
-    m     0.24966393370182427
-	gp    1.6476930954286066
-	r0p   4.6606342738792
-	Np    -0.4205026165968266
-(end)
 
 abinitio-NAC 1 2
 name <1|d/dr|2>
@@ -30504,7 +30441,7 @@ sigma 0.0 0.0
 lambda 0 0
 type grid
 factor 1.0
-fit_range -10 10
+fit_range 5 20
 values
 	-10	0
 	-9.5	0
@@ -31191,78 +31128,4 @@ values
 	25.970000	0.004723521975
 	26.275000	0.004723539226
 end
-
-
-(NAC 1 2)
-(name <1|d/dr|2>)
-(spin 0.0 0.0)
-(sigma 0.0 0.0)
-(lambda 0 0)
-(type mix_perturbed)
-(sub-types lorentzian gaussian lorentzian)
-(factor 1.0)
-(values )
-(    gamma   0.08538946628004877)
-(    r0      0.7628442991796224)
-(    N       1.0627667889299393)
-(    a       -2.669882503109536)
-(    m       0.16087658956755044)
-(	gp      0.5015415851924446)
-(	r0p     1.2008396216507589)
-(	Np      -0.8665575434010864)
-(	gp      1.1024485370904693)
-(	r0p     2.684310201344304)
-(	Np      0.5079987733018563)
-(end)
-()
-()
-(NAC 1 3)
-(name <1|d/dr|3>)
-(spin 0.0 0.0)
-(sigma 0.0 0.0)
-(lambda 0 0)
-(type mix_perturbed)
-(sub-types lorentzian gaussian lorentzian)
-(factor 1.0)
-(values )
-(    gamma  0.11192830722988165)
-(    r0     0.7262429485803855)
-(    N      -0.3392111727500904)
-(    a      1.126236159710958)
-(    m      -1.1934311391477468)
-(	gp     0.15184113809562916)
-(	r0p    1.1111805728049966)
-(	Np     0.09759512940607158)
-(	gp     0.8875924052090763)
-(	r0p    2.3631365602323444)
-(	Np     -0.21449209392216165)
-(end)
-()
-()
-(NAC 2 3)
-(name <2|d/dr|3>)
-(spin 0.0 0.0)
-(sigma 0.0 0.0)
-(lambda 0 0)
-(type mix_perturbed)
-(sub-types lorentzian gaussian lorentzian)
-(factor 1.0)
-(values )
-(    gamma  0.07021844411147327)
-(    r0     0.9317872789247527)
-(    N      -1.7349930995417944)
-(    a      -11.462346500423338)
-(    m      -0.008873517423265254)
-(	gp     0.16058573578948696)
-(	r0p    0.7005643888967041)
-(	Np     -1.5029636144124792)
-(	gp     0.19599865927197876)
-(	r0p    1.0377856962105003)
-(	Np     1.7957637826764734)
-(	gp     0.6412299901654283)
-(	r0p    2.8218510935775685)
-(	Np     -0.2260111060750968)
-(end)
-
-
 

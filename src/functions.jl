@@ -444,6 +444,37 @@ function mix(r, g0, r0, amp, a, m, sub_types)
     return m * f2(r, g, r0, amp) + (1 - m) * f1(r, g, r0, amp)
 end
 #
+# function mix_perturbed(r, g0, r0, amp, a, m, ptrb_and_subtype_params...)
+#     sub_types = ptrb_and_subtype_params[end]
+#     p_ptrb = collect(ptrb_and_subtype_params[1:end-1])
+#     #
+#     ## evalute functional symbols
+#     f1 = eval(Symbol(sub_types[1]))
+#     f2 = eval(Symbol(sub_types[2]))
+#     #
+#     ## compute gamma
+#     if a != 0.0
+#         g = ref_sigmoid(r,g0,a,r0)
+#     else
+#         g = g0
+#     end
+#     #
+#     ## compute perturbation
+#     fP = eval(Symbol(sub_types[3]))
+#     #
+#     ## compute how many paerturbations
+#     N_ptrb = Int(length(p_ptrb)/3)
+#     p_ptrb = reshape(p_ptrb,N_ptrb,:)
+#     #
+#     P = 0.0
+#     for idx=1:N_ptrb
+#         gi, r0i, ampi = p_ptrb[1,idx], p_ptrb[2,idx], p_ptrb[3,idx]
+#         P+=fP(r, gi, r0i, ampi)
+#     end
+#     #
+#     ## compute mixture + perturbation
+#     return abs(m) * f2(r, g, r0, amp) + (1 - abs(m)) * f1(r, g, r0, amp) + P
+# end
 function mix_perturbed(r, g0, r0, amp, a, m, ptrb_and_subtype_params...)
     sub_types = ptrb_and_subtype_params[end]
     p_ptrb = collect(ptrb_and_subtype_params[1:end-1])
@@ -467,9 +498,14 @@ function mix_perturbed(r, g0, r0, amp, a, m, ptrb_and_subtype_params...)
     p_ptrb = reshape(p_ptrb,:,N_ptrb)
     #
     P = 0.0
-    for idx=1:N_ptrb
-        gi, r0i, ampi = p_ptrb[1,idx], p_ptrb[2,idx], p_ptrb[3,idx]
+    if N_ptrb == 1
+        gi, r0i, ampi = p_ptrb[1], p_ptrb[2], p_ptrb[3]
         P+=fP(r, gi, r0i, ampi)
+    else
+        for idx=1:N_ptrb
+            gi, r0i, ampi = p_ptrb[1,idx], p_ptrb[2,idx], p_ptrb[3,idx]
+            P+=fP(r, gi, r0i, ampi)
+        end
     end
     #
     ## compute mixture + perturbation
