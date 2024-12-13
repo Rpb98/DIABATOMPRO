@@ -61,49 +61,49 @@ r = LinRange(Calculation["grid"].range[1],
 # diabatom["NonAdiabaticCoupling"] = NonAdiabaticCoupling
 #
 ## run the diabatiser
-if Calculation["method"].abinitio_fit == true
-    fit_abinitio()
-elseif Calculation["method"].abinitio_fit == false
-    U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
-    #
-    fig, axs = plt.subplots(2,1,sharex=true,figsize=[8,8])
+# if Calculation["method"].abinitio_fit == true
+#     fit_abinitio()
+# elseif Calculation["method"].abinitio_fit == false
+#     U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+#     #
+#     fig, axs = plt.subplots(2,1,sharex=true,figsize=[8,8])
 
-    plt.subplots_adjust(wspace=0, hspace=0)
+#     plt.subplots_adjust(wspace=0, hspace=0)
 
-    # axs[1,1].set_title("MRCI aug-cc-pVQZ-X2C | occ = 8330, closed = 5110")
-    for i=1:dim
-        if i in Calculation["method"].states
-            axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-            axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-        end
-    end
+#     # axs[1,1].set_title("MRCI aug-cc-pVQZ-X2C | occ = 8330, closed = 5110")
+#     for i=1:dim
+#         if i in Calculation["method"].states
+#             axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+#             axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+#         end
+#     end
 
-    # axs[1,1].set_xlabel("Bond Length")
-    axs[1,1].set_ylabel("Potential, cm-1")
+#     # axs[1,1].set_xlabel("Bond Length")
+#     axs[1,1].set_ylabel("Potential, cm-1")
 
-    for i=1:dim
-        for j=i+1:dim
-            if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
-                axs[2,1].plot(r,Objects["nac"][:,i,j],"--",alpha=0.5)
-            end
-        end
-    end
+#     for i=1:dim
+#         for j=i+1:dim
+#             if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                 axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
+#                 axs[2,1].plot(r,Objects["nac"][:,i,j],"--",alpha=0.5)
+#             end
+#         end
+#     end
 
-    axs[2,1].set_xlabel("Bond Length")
-    axs[2,1].set_ylabel("NAC, 1/Ang")
-    # plt.plot(r,Diabatic_Objects["potential"][:,3,3])
-    axs[1,1].legend()
-    axs[2,1].legend()
+#     axs[2,1].set_xlabel("Bond Length")
+#     axs[2,1].set_ylabel("NAC, 1/Ang")
+#     # plt.plot(r,Diabatic_Objects["potential"][:,3,3])
+#     axs[1,1].legend()
+#     axs[2,1].legend()
 
-    sf = Calculation["method"].states[end]
-    Emax = Objects["potential"][end,sf,sf]
+#     sf = Calculation["method"].states[end]
+#     Emax = Objects["potential"][end,sf,sf]
 
-    si = Calculation["method"].states[1]
-    Emin = minimum(Objects["potential"][:,si,si])
+#     si = Calculation["method"].states[1]
+#     Emin = minimum(Objects["potential"][:,si,si])
 
-    axs[1,1].set_ylim(Emin,1.1*Emax)
-end
+#     axs[1,1].set_ylim(Emin,1.1*Emax)
+# end
 #
 ## make a new Hamiltonian with different representations
 #

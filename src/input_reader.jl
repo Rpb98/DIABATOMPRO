@@ -114,7 +114,7 @@ function initialise_input_parameters(line::String)
     #
     input_values["abinitio_fit"] = "false"
     #
-    input_values["fit_range"] = ("0","10")
+    input_values["fit_range"] = ("-1e100","1e100")
     #
     ## save block
     input_values["as"] = "file"
@@ -377,10 +377,14 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
     ## 
     elseif occursin("nac",lowercase(object_key))                                          # NAC instance
         obj_type = "NAC"
-        if occursin("abinitio",lowercase(object_key))
-            range = parse.(Float64,input_values["fit_range"])
-        else
+        #
+        range_init = parse.(Float64,input_values["fit_range"])
+        #
+        if (range_init[1] == -1e100)&(range_init[2]==1e100)
             range = Calculation["grid"].range 
+        else
+        # if occursin("abinitio",lowercase(object_key))
+            range = parse.(Float64,input_values["fit_range"])
         end
         #
         ## if object has grid type, parse left column to floats (bonds
@@ -412,7 +416,17 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         #
         return object, obj_type
     elseif lowercase(object_key) == "switch"
+        println("Switch")
         obj_type = "switch"
+        #
+        range_init = parse.(Float64,input_values["fit_range"])
+        #
+        if (range_init[1] == -1e100)&(range_init[2]==1e100)
+            range = Calculation["grid"].range 
+        else
+        # if occursin("abinitio",lowercase(object_key))
+            range = parse.(Float64,input_values["fit_range"])
+        end
         #
         ## if object has grid type, parse left column to floats (bonds
         if input_values["type"]=="grid"
@@ -430,7 +444,9 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                         input_values["Rval"],
                         range) 
         #
-        SwitchingFunction[object.ID]=object 
+        SwitchingFunction[object.ID]=object
+        # 
+        return object, obj_type
     end
 end
 #
@@ -505,7 +521,8 @@ function read_file(fname)
                "spin-orbit",
                    "dipole", 
                        "lx", 
-                      "nac"]
+                      "nac",
+                   "switch"]
         #
         ## Loop over each line in the input file
         for (LineIndex, line) in enumerate(eachline(f))

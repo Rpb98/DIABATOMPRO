@@ -611,6 +611,8 @@ function COUPLED_PEC(R, TYPES, PARAMS, ARGS, COMPONENT, pDICTS; betaCouple=false
     end
 end
 #
+# function sigmoid_polynom_decay_24(r, gamma0, r0, )
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ METHOD FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 function ComputeProperty(self; custom_grid = false, evolution_grid = false)

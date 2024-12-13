@@ -28541,12 +28541,19 @@ name <1|d/dr|2>
 spin 0.0 0.0
 sigma 0.0 0.0
 lambda 0 0
-type lorentzian
+type sigmoid_polynom_decay_24
 factor 1.0
 values 
-    gamma        1.7562989613094162
+    gamma0       1.7562989613094162
     r0           4.17873011028104
-    N           -1.0
+	p			 4
+	beta2
+	beta4
+	Binf
+	b0
+	b1
+	b2
+	b3
 end
 
 NAC 2 3
