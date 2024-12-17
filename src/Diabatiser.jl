@@ -524,7 +524,7 @@ function find_closest_permutation(A,dim)
     return Q
 end
 #
-function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.1)
+function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.1)
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -973,6 +973,487 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     #
     return U, dU, UdU, K, Vd, W_regularised
 
+end
+#
+function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.1)
+    rgrid = collect(rgrid)
+    #                  
+    ######################### FUNCTIONS FOR SUBROUTINE #########################
+    #
+    ## switching generator matrices with #dim sigmoids
+    function matMix_const_gamma(x, A, B, r0_vec, gamma_vec)
+        #
+        ## initialise matrix C
+        C = zeros(Float64,dim,dim)
+        #
+        ## assume row stacking indices
+        k = 0
+        #
+        for i=1:dim
+            for j=i+1:dim
+                #
+                k += 1
+                #
+                f = sigmoid(x, gamma_vec[k], r0_vec[k])
+                #
+                C[i,j] = f * B[i,j] + (1 - f) * A[i,j] 
+                C[j,i] = f * B[j,i] + (1 - f) * A[j,i]
+            end
+        end
+        #
+        return C
+    end
+    #
+    ## sigmoid with r-dependent gamma
+    function sigmoid_variable_gamma(r,gamma,r0)
+        return map(x -> 1/(1+exp(-gamma[x]*(r[x]-r0))), collect(1:lastindex(r)))
+    end
+    #
+    ## morphing function
+    function polynom_decay_24(r, re, B; Binf = 1, beta2 = 0.1, beta4 = 0.02, p = 4)
+        #
+        ## Surkus variable
+        y = (r^p-re^p)/(r^p+re^p)
+        #
+        ## reduced variable
+        z = (r-re) * exp(-beta2*(r-re)^2-beta4*(r-re)^4) # sigmoid_square(r, region[1], region[2], re)
+        #
+        expansion = sum([B[k] * z^(k-1) * (1-y) for k=1:size(B)[1]]) + Binf * y
+        #
+        return expansion
+    end
+    #
+    ## morph constant to a curve via multiplication with f =  polynom_decay_24
+    function morph_const_pd24(r, fconst, re, B; Binf = 1, beta2 = 0.1, beta4 = 0.02, p = 4)
+        #
+        return fconst .* map(x -> polynom_decay_24(x, re, B, Binf = Binf, beta2 = beta2, beta4 = beta4, p = p), r)
+    end
+    #
+    ## finite difference (high order accuracy) for matrices
+    function FiniteDiff_MatDerivative(x, M, dim, d_order)
+        dM = zeros(Float64,length(x),dim,dim)
+        #
+        ## extract elements of U, spline them, form splined matrix and derivative
+        for i=1:dim
+            for j=1:dim
+                #
+                Mij = [u[i,j] for u in M]
+                #
+                dMij = FiniteDifference(x,Mij,d_order)
+                #
+                dM[:,i,j] = dMij
+            end
+        end
+        #
+        return [dM[idx,:,:] for idx=1:lastindex(x)]
+    end
+    #
+    ## smoothness of the dynamics induced into diabats by U (omitting adiabats)
+    function SmoothnessByU(r,U,Va,dim)
+        #
+        # if Threads.nthreads() >=2
+        #     #
+        #     derivs = Vector{Vector{SMatrix{dim, dim, Float64}}}(undef, 2)
+        #     #
+        #     @threads for i in 1:2
+        #         derivs[i] = Vector{SMatrix{dim, dim, Float64}}(FiniteDiff_MatDerivative(r,U,dim,i))
+        #     end
+        #     #
+        #     dU, d2U = derivs[1], derivs[2]
+        # else
+        dU  = Vector{SMatrix{dim, dim, Float64}}(FiniteDiff_MatDerivative(r,U,dim,1))
+        d2U = Vector{SMatrix{dim, dim, Float64}}(FiniteDiff_MatDerivative(r,U,dim,2))
+        # end
+        #
+        U  = Vector{SMatrix{dim, dim, Float64}}(U)
+        Va = Vector{SMatrix{dim, dim, Float64}}(Va)
+        #
+        # n = length(r)
+        # num_threads = min(Threads.nthreads(), n)
+        # chunk_size = ceil(Int, n / num_threads)
+        
+        # SmoothSum = zeros(Float64,dim)
+    
+        # @threads for i in 1:num_threads
+        #     start_idx = (i - 1) * chunk_size + 1
+        #     end_idx = min(i * chunk_size, n)
+        #     #
+        #     println(start_idx," ",end_idx)
+        #     for x=start_idx:end_idx
+        #         local M
+        #         M = d2Uf[x]'*Va[x]*Uf[x] + 2*dUf[x]'*Va[x]*dUf[x] + Uf[x]'*Va[x]*d2Uf[x]
+        #         for i=1:dim
+        #             SmoothSum[i] += M[i,i]^2
+        #         end
+        #     end
+        # end
+
+        SmoothSum = zeros(Float64,dim)
+        #
+        for x=1:lastindex(r)
+            #
+            M = d2U[x]'*Va[x]*U[x] + 2*dU[x]'*Va[x]*dU[x] + U[x]'*Va[x]*d2U[x]
+            #
+            for i=1:dim
+                for j=i:dim
+                    SmoothSum[i] += M[i,j]^2
+                end
+            end
+        end
+        #
+        return sqrt(sum(SmoothSum))
+    end
+    #
+    ## switching generator matrices via sigmoids with r-dependent gammas
+    function matMix_variable_gamma(x, A, B, r0_vec, g_morphed, idx)
+        #
+        ## initialise matrix C
+        C = zeros(Float64,dim,dim)
+        #
+        ## assume row stacking indices
+        k = 0
+        #
+        for i=1:dim
+            for j=i+1:dim
+                #
+                k += 1
+                #
+                f = sigmoid_variable_gamma(x, g_morphed[k][idx], r0_vec[k])[1]
+                #
+                C[i,j] = f * B[i,j] + (1 - f) * A[i,j] 
+                C[j,i] = f * B[j,i] + (1 - f) * A[j,i]
+            end
+        end
+        #
+        return C
+    end
+    #
+    ## slices array of switching function parameters into subsequent blocks based on number of parameters
+    function parameter_idx_splicer(Nparams,idx)
+        #
+        if idx == 1
+            return 1, 1 + (Nparams[1] - 1)
+        else
+            idx_start = sum(Nparams[1:idx-1])+1
+            #
+            idx_end   = idx_start + (Nparams[idx] - 1)
+            #
+            return idx_start, idx_end
+        end
+    end
+    #
+    ## cost function for fitting switching function
+    function cost(rgrid, Va, Kf, Kb, dim, bounds, fit_flags, pidx, p)
+        #
+        ## extract parameters, check if to be fit, check for bounds, and compute morphing function
+        row_col_counter = 0
+        #
+        r0 = []
+        #
+        g_morphed = []
+        #
+        g_morphed_boundary = []
+        for i=1:dim
+            for j=i+1:dim
+                #
+                ## extract parameter for element Fij
+                row_col_counter += 1
+                #
+                idx_start, idx_end = pidx[row_col_counter]
+                #
+                param_ij = p[idx_start:idx_end]
+                #
+                ## check to see if any parameters fall outside of the boundary windows, if so return huge cost
+                parameter_bounds = bounds[row_col_counter] #SwitchingFunction[[i,j]].bounds
+                outOfBounds  = [(param_ij[i] < parameter_bounds[i][1])|(param_ij[i] > parameter_bounds[i][2]) for i=1:lastindex(param_ij)]
+                #
+                if any(outOfBounds .== 1)
+                    return 1e100
+                end
+                #
+                ## check which parameters are fit, if they are not to be fit set them equal to their user defined value
+                fit_flag = fit_flags[row_col_counter] #SwitchingFunction[[i,j]].fit
+                #
+                for (idx, flag) in enumerate(fit_flag)
+                    if flag != 1
+                        param_ij[idx] = SwitchingFunction[[i,j]].Rval[idx]
+                    end
+                end
+                #
+                ## assign parameters
+                g0_ij    = param_ij[1]
+                r0_ij    = param_ij[2]
+                p_ij     = param_ij[3]
+                beta2_ij = param_ij[4]
+                beta4_ij = param_ij[5]
+                B_ij     = param_ij[6:end]
+                #
+                ## compute the morphed sigmoid width parameter
+                push!(g_morphed, morph_const_pd24(r, g0_ij, r0_ij, B_ij, beta2 = beta2_ij, beta4 = beta4_ij, p = p_ij))
+                #
+                push!(g_morphed_boundary, morph_const_pd24(region, g0_ij, r0_ij, B_ij, beta2 = beta2_ij, beta4 = beta4_ij, p = p_ij))
+                #
+                push!(r0,r0_ij)
+            end
+        end
+        #
+        ## check if the sigmoids break boundary conditions
+        row_col_counter = 0
+        for i=1:dim
+            for j=i+1:dim
+                #
+                row_col_counter += 1
+                #
+                fL = sigmoid(region[1], g_morphed_boundary[row_col_counter][1], r0[row_col_counter])
+                fR = sigmoid(region[2], g_morphed_boundary[row_col_counter][2], r0[row_col_counter])
+                #
+                if any([fL > µ, fR < 1 - µ])
+                    return 1e100
+                end
+            end
+        end
+        #
+        ## compute mixing of Kf and Kb
+        K  = map( x -> matMix_variable_gamma(rgrid[x], Kf[x], Kb[x], r0, g_morphed, x), collect(1:lastindex(rgrid)))
+        #
+        ## compute the corresponding unitary matrix
+        U  = real(exp.(K))
+        #
+        ## compute smoothness of the diabatic curves induced by U (ignore adiabatic smoothness/derivatives)
+        smoothness =  SmoothnessByU(rgrid,U,Va,dim)
+        #
+        return smoothness
+    end
+    #
+    ## inversion of sigmoid for gamma
+    function gamma_sigmoid(rref, f, r0)
+        return -log((1/(f))-1)/(rref-r0)
+    end
+    #
+    function sigmoid_square(r, rmin, rmax, rref; µ = 1e-2)
+        #
+        ##
+        rLmid = rmin + 0.25*(rref - rmin)
+        rRmid = rmax - 0.25*(rmax - rref)
+        #
+        ## find gamma to ensure the sigmoid is zero at boundaries
+        gL = gamma_sigmoid(rmin, µ, rLmid)
+        gR = gamma_sigmoid(rmax, 1-µ, rRmid)
+        #
+        g = maximum([gL, gR])
+        #
+        ## construct the sigmoid-square
+        return sigmoid(r, gL, rLmid)*(1 - sigmoid(r, gR, rRmid))
+    end
+    #
+    function initialise_switches_black_box(∂K, rgrid)
+        #
+        ## find average of peak positions (the elements are closest) to set the sigmoid centres
+        r0 = []
+        r0_bounds = []
+        g0 = []
+        for i=1:dim
+            for j=i+1:dim
+                if [i,j] ∉ keys(SwitchingFunction)
+                    #
+                    ## compute position where f & b generator elements vary the quickest
+                    ∂Kij = [d[i,j] for d in ∂K]
+                    deriv_∂Kij  = FiniteDifference(rgrid, ∂Kij, 1)
+                    ij_peak_idx = argmax(abs.(deriv_∂Kij))
+                    push!(r0, rgrid[ij_peak_idx])
+                    #
+                    ## compute HWHM of this for fitting range
+                    deriv_∂Kij_peak   = maximum(abs.(deriv_∂Kij))
+                    # println(deriv_∂Kij_peak,deriv_∂Kij)
+                    # plt.figure()
+                    # plt.plot(r,deriv_∂Kij)
+                    #
+                    HWHM_end_idx   = ij_peak_idx + (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in deriv_∂Kij[ij_peak_idx:end]]) - 1) - 1
+                    HWHM_start_idx = length(reverse(∂Kij[1:ij_peak_idx])) - (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in reverse(deriv_∂Kij[1:ij_peak_idx]) ]) - 1) + 1
+                    #
+                    push!(r0_bounds, [rgrid[HWHM_start_idx], rgrid[HWHM_end_idx]])
+                    #
+                    ## now estimate mimimum value for gamma
+                    g_thresh_left  = [gamma_sigmoid(region[1],     µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[1],     µ, r0[end]), gamma_sigmoid(region[1],     µ, rgrid[HWHM_end_idx])]
+                    g_thresh_right = [gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[2],   1-µ, r0[end]), gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_end_idx])]
+                    #
+                    push!(g0, maximum([g_thresh_left..., g_thresh_right...]))
+                    #
+                else
+                    push!(r0, mean(region))
+                    push!(r0_bounds, [-1e100,1e100])
+                    push!(g0, 1e-16)
+                end
+            end
+        end
+        #
+        g_guess = [g0...,r0...]
+        #
+        return g0, r0, r0_bounds, g_guess
+    end
+    ################## INITIALISATION OF ROUTINE PARAMETERS ####################
+    Nel = Int(dim*(dim-1)/2)
+    #
+    ## convert matrices to vector format
+    Uf = [Uf[i,:,:] for i=1:lastindex(Uf[:,1,1])]
+    Ub = [Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
+    Va = [Va[i,:,:] for i=1:lastindex(Va[:,1,1])]
+    #
+    ## compute generators for each solution & their difference matrix
+    Kf = real(log.(Uf))
+    Kb = real(log.(Ub))
+    ∂K = Kf .- Kb
+    #
+    ## initialise switching function parameters
+    g0, r0, r0_bounds, g_guess = initialise_switches_black_box(∂K,rgrid) # black box initialisation
+    #
+    ## row/column counter, e.g. 1,2,3,... -> [1,2], [1,3], ... , [2,3],[2,4], ...
+    row_col_counter = 0
+    #
+    Nparams = []
+    params_total = []
+    param_idx = []
+    #
+    ## set user defined parameters
+    for i=1:dim
+        for j=i+1:dim
+            row_col_counter += 1
+            if [i,j] in keys(SwitchingFunction)
+                param_ij = SwitchingFunction[[i,j]].Rval
+            else
+                switch_ij = SWITCH([i,j],
+                                    "switch",
+                                    ["g0", "r0","p","beta2","beta4","B0","B1","B2"],
+                                    [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0],
+                                    [1,1,0,0,0,1,1,1],
+                                    [[g0[row_col_counter]*0.99,1e100],r0_bounds[row_col_counter],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100][-1e100,1e100],[-1e100,1e100]],
+                                    [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
+                                   )
+                #
+                SwitchingFunction[[i,j]] = switch_ij
+                #
+                param_ij = [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
+            end
+            #
+            push!(Nparams,length(param_ij))
+            #
+            append!(params_total, param_ij)
+            #
+            push!(param_idx,parameter_idx_splicer(Nparams,row_col_counter))
+        end
+    end
+    #
+    ## minimiser options 
+    options = Optim.Options(
+    x_tol = 1e-4,
+    show_trace = true
+    )
+    #
+    ##################### FITTING THE SWITCHING FUNCTIONS ######################
+    #
+    o_ = optimize(p -> cost(rgrid, 
+                            Va, 
+                            Kf, 
+                            Kb,
+                            dim, 
+                            [SwitchingFunction[[i,j]].bounds for i=1:dim-1 for j=i+1:dim], 
+                            [SwitchingFunction[[i,j]].fit    for i=1:dim-1 for j=i+1:dim], 
+                            param_idx, 
+                            p), [params_total...], options)
+    popt = Optim.minimizer(o_)
+    #
+    ## set the fitted parameters in the switching function fields and print the fitted parameters
+    row_col_counter = 0
+    #
+    println()
+    println("__OPTIMISED REFERENCE GAMMA PARAMETERS__")
+    for i=1:dim
+        for j=i+1:dim
+            row_col_counter += 1
+            #
+            idx_start, idx_end = param_idx[row_col_counter]
+            #
+            fitted_params_ij = popt[idx_start:idx_end]
+            #
+            SwitchingFunction[[i,j]].fitted_parameters = fitted_params_ij
+            #
+            ## print the parameters for the user
+            println("< ",i," | F | ",j," > :")
+            println("---------------")
+            println("g0"   , i, j, " = ", fitted_params_ij[1])
+            println("r0"   , i, j, " = ", fitted_params_ij[2])
+            println("p"    , i, j, " = ", fitted_params_ij[3])
+            println("beta2", i, j, " = ", fitted_params_ij[4])
+            println("beta4", i, j, " = ", fitted_params_ij[5])
+            for d=1:lastindex(fitted_params_ij[6:end])
+                println("B", d-1, " = ", fitted_params_ij[6:end][d])
+            end
+            println()
+        end
+    end
+    #
+    ################## COMPUTING THE REGULARISING CORRECTION ###################
+    #
+    ## extract the AtDTs on the solution grid
+    rsolve = DENSE_GRID_OBJECTS[1]
+    Uf_dense_grid = DENSE_GRID_OBJECTS[2]
+    Ub_dense_grid = DENSE_GRID_OBJECTS[3]
+    Uf_dense_grid = [ Uf_dense_grid[i,:,:] for i=1:lastindex(Uf_dense_grid[:,1,1])]
+    Ub_dense_grid = [ Ub_dense_grid[i,:,:] for i=1:lastindex(Ub_dense_grid[:,1,1])]
+    #
+    ## compute the generator matrices on the solution grid
+    Kf_dense_grid = real(log.(Uf_dense_grid))
+    Kb_dense_grid = real(log.(Ub_dense_grid))
+    #
+    ## compute morphed gammas
+    g_morphed = []
+    #
+    g_morphed_dense_grid = []
+    #
+    r0 = []
+    #
+    for i=1:dim
+        for j=i+1:dim
+            #
+            param_ij = SwitchingFunction[[i,j]].fitted_parameters
+            #
+            g0_ij    = param_ij[1]
+            r0_ij    = param_ij[2]
+            p_ij     = param_ij[3]
+            beta2_ij = param_ij[4]
+            beta4_ij = param_ij[5]
+            B_ij     = param_ij[6:end]
+            #
+            ## compute the morphed sigmoid width parameter
+            push!(g_morphed, morph_const_pd24(rgrid, g0_ij, r0_ij, B_ij, beta2 = beta2_ij, beta4 = beta4_ij, p = p_ij))
+            #
+            push!(g_morphed_dense_grid, morph_const_pd24(rsolve, g0_ij, r0_ij, B_ij, beta2 = beta2_ij, beta4 = beta4_ij, p = p_ij))
+            #
+            push!(r0, r0_ij)
+        end
+    end
+    #
+    ## compute the fitted generator matrix
+    K  = map( x -> matMix_variable_gamma(rgrid[x], Kf[x], Kb[x], r0, g_morphed, x), collect(1:lastindex(rgrid)))
+    #
+    ## compute the corresponding unitary matrix
+    U  = real(exp.(K))
+    #
+    Vd = adjoint.(U) .* Va .* U
+    #
+    dU = FiniteDiff_MatDerivative(rgrid,U,dim,1) # computes derivative of matrix
+    UdU = map(i -> U[i]*dU[i]',collect(1:size(rgrid)[1]))
+    #
+    ## compute matrices on the dense grid
+    K_dense_grid  = map( x -> matMix_variable_gamma(rsolve[x], Kf_dense_grid[x], Kb_dense_grid[x], r0, g_morphed_dense_grid, x), collect(1:lastindex(rsolve)))
+    #
+    U_dense_grid  = real(exp.(K_dense_grid))
+    #
+    dU_dense_grid = FiniteDiff_MatDerivative(rsolve,U_dense_grid,dim,1) # computes derivative of matrix
+    #
+    W_regularised = map(i -> U_dense_grid[i]*dU_dense_grid[i]',collect(1:size(rsolve)[1]))
+    #
+    return U, dU, UdU, K, Vd, W_regularised
 end
 #
 function N_state_diabatisation(block)

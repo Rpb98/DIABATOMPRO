@@ -1,6 +1,6 @@
 grid                
   npoints 2001
-  range   3.4 20   
+  range   1.21 20   
   interpolation_type  cubic
 end
 
@@ -9,7 +9,7 @@ method
     states 1 2 3
 	diabatisation evolution
 	regularisation potential
-	grid_resolution 0.0001
+	grid_resolution 0.001
 	r_boundary_condition 0 -1 0 0 0 -1 1 0 0
 	abinitio_fit false
 end
@@ -24,7 +24,6 @@ save
 end
 
 (--- POTENTIALS ---)
-
 poten 1
 name [1]^1Sigma+
 symmetry +
@@ -28524,6 +28523,42 @@ values
 end
 
 (--- NACs ---)
+switch 1 2
+values 
+    g0          0.94 fit
+    r0          4.46 fit
+	p           4.00    
+	beta2       0.10    
+	beta4       0.02    
+	B0          1.00 fit
+	B1          0.00 fit
+	B2          0.00 fit
+end
+
+switch 1 3
+values 
+    g0          0.60 fit
+    r0          1.67 fit
+	p           4.00    
+	beta2       0.10    
+	beta4       0.02    
+	B0          1.00 fit
+	B1          0.00 fit
+	B2          0.00 fit
+end
+
+switch 2 3
+values 
+    g0          1.16 fit
+    r0          7.20 fit
+	p           4.00    
+	beta2       0.10    
+	beta4       0.02    
+	B0          1.00 fit
+	B1          0.00 fit
+	B2          0.00 fit
+end
+
 
 
 NAC 1 2

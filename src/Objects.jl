@@ -89,14 +89,11 @@ end
 mutable struct SWITCH
     ID                :: Array{Int}
     obj_type          :: String
-    type              :: String
-    sub_type          :: Tuple{String,String,String}
     Lval              :: Array{Any}
     Rval              :: Array{Any}
     fit               :: Array{Int}
     bounds            :: Array{Any}
     fitted_parameters :: Array{Any}
-    fit_range         :: Tuple{Number,Number}
 end
 #
 ## Create a grid class

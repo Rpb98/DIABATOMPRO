@@ -416,33 +416,16 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         #
         return object, obj_type
     elseif lowercase(object_key) == "switch"
-        println("Switch")
         obj_type = "switch"
-        #
-        range_init = parse.(Float64,input_values["fit_range"])
-        #
-        if (range_init[1] == -1e100)&(range_init[2]==1e100)
-            range = Calculation["grid"].range 
-        else
-        # if occursin("abinitio",lowercase(object_key))
-            range = parse.(Float64,input_values["fit_range"])
-        end
-        #
-        ## if object has grid type, parse left column to floats (bonds
-        if input_values["type"]=="grid"
-            input_values["Lval"] = parse.(Float64,input_values["Lval"])
-        end
         #
         object = SWITCH(parse.(Int,input_values["id"]),
                         "switch",
-                        input_values["type"],
-                        input_values["sub-types"],
                         input_values["Lval"],
                         input_values["Rval"],
                         input_values["fit"],
                         input_values["bounds"],
-                        input_values["Rval"],
-                        range) 
+                        input_values["Rval"]
+                        ) 
         #
         SwitchingFunction[object.ID]=object
         # 
@@ -603,7 +586,7 @@ function read_file(fname)
                     #
                     ## if the object block corresponded to a molecular property, 
                     ## insert its class instance into the Hamiltonian dictionary
-                    if (object_key != "grid")&(object_key != "method")&(occursin("abinitio",lowercase(object_key)) == false)              # populate Hamiltonian
+                    if (object_key != "grid")&(object_key != "method")&(occursin("abinitio",lowercase(object_key)) == false)&(lowercase(object_key) != "switch") # populate Hamiltonian
                         Hamiltonian[(obj_type,object.ID)]=object
                     end
                     continue
