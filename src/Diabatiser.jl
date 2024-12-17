@@ -1207,9 +1207,10 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
                 fL = sigmoid(region[1], g_morphed_boundary[row_col_counter][1], r0[row_col_counter])
                 fR = sigmoid(region[2], g_morphed_boundary[row_col_counter][2], r0[row_col_counter])
                 #
-                if any([fL > µ, fR < 1 - µ])
-                    return 1e100
-                end
+                # if any([fL > µ, fR < 1 - µ])
+                #     println("oh no")
+                #     return 1e100
+                # end
             end
         end
         #

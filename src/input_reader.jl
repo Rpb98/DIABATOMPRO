@@ -446,7 +446,7 @@ function values_column_pop(line::String, fitcol::Vector{Any}, boundscol::Vector{
         if (ln[3] == "fit")
             if (length(ln) == 3)
                 push!(fitcol,1)
-                push!(boundscol,[-1e20,1e20])
+                push!(boundscol,[-1e100,1e100])
             elseif (length(ln) > 3)
                 push!(fitcol,1)
                 push!(boundscol,[parse(Float64,ln[4]),parse(Float64,ln[5])])
@@ -455,7 +455,7 @@ function values_column_pop(line::String, fitcol::Vector{Any}, boundscol::Vector{
             Rval = parse(Float64,Rval[1])
         else
             push!(fitcol,0)
-            push!(boundscol,[NaN,NaN])
+            push!(boundscol,[-1e100,1e100])
             #
             Rval = parse.(Float64,Rval)
             if length(Rval) == 1
@@ -464,7 +464,7 @@ function values_column_pop(line::String, fitcol::Vector{Any}, boundscol::Vector{
         end
     else
         push!(fitcol,0)
-        push!(boundscol,[NaN,NaN])
+        push!(boundscol,[-1e100,1e100])
         Rval = parse.(Float64,Rval)
         if length(Rval) == 1
             Rval = Rval[1]
