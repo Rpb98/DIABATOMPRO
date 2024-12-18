@@ -1936,7 +1936,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = Potential_Matrix[idx, state, state]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -1967,7 +1967,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = NAC_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -1997,7 +1997,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = K_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -2026,7 +2026,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = Vd_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -2082,7 +2082,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = SO_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -2133,7 +2133,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = Lx_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")
@@ -2208,7 +2208,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         for idx=1:size(r)[1]
             x = r[idx]
             y = DM_Matrix[idx, i, j]
-            println(io, "\t$x\t$y")
+            @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
         println(io, "end")

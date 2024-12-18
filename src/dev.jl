@@ -13,6 +13,7 @@ include("Diabatiser.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATOMPRO FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 using PyPlot
+using Printf
 #
 ## terminal print statement
 print("▒█▀▀▄ ▀█▀ ░█▀▀█ ▒█▀▀█ █▀▀█ ▀▀█▀▀ █▀▀█ █▀▄▀█  ░░  ▒█▀▀█ █▀▀█ █▀▀█\n")    
@@ -104,6 +105,7 @@ elseif Calculation["method"].abinitio_fit == false
     axs[1,1].set_ylim(Emin,1.1*Emax)
 end
 #
-## make a new Hamiltonian with different representations
-#
-## save diabatisation?
+
+save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, fname, special_name = "KH_regularised_01")
+
+
