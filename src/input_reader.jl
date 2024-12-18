@@ -449,7 +449,16 @@ function values_column_pop(line::String, fitcol::Vector{Any}, boundscol::Vector{
                 push!(boundscol,[-1e100,1e100])
             elseif (length(ln) > 3)
                 push!(fitcol,1)
-                push!(boundscol,[parse(Float64,ln[4]),parse(Float64,ln[5])])
+                #
+                ## check if a percentage is given
+                if any(occursin.("%", ln))
+                    val = parse(Float64, ln[2])
+                    pcnt = parse(Float64,split(ln[end],"%")[1])/100
+                    #
+                    push!(boundscol,[(1-pcnt)*val, (1+pcnt)*val])
+                else
+                    push!(boundscol,[parse(Float64,ln[4]),parse(Float64,ln[5])])
+                end
             end
             #
             Rval = parse(Float64,Rval[1])

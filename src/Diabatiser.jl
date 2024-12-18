@@ -975,7 +975,7 @@ function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECT
 
 end
 #
-function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.1)
+function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.01)
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -1222,7 +1222,7 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
                 fR = sigmoid(region[2], g_morphed_boundary[row_col_counter][2], r0[row_col_counter])
                 #
                 if any([fL > µ, fR < 1 - µ])
-                    penalty += sigmoid(fL - µ, 50, 0) + sigmoid((1-µ) - fR, 50, 0)
+                    penalty += sigmoid(fL - µ, 1000, 0) + sigmoid((1-µ) - fR, 1000, 0)
                 else
                     penalty += 0
                 end
@@ -1238,7 +1238,7 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
         ## compute smoothness of the diabatic curves induced by U (ignore adiabatic smoothness/derivatives)
         smoothness =  SmoothnessByU(rgrid,U,Va,dim)
         #
-        return smoothness + penalty*100
+        return (1 + penalty)*smoothness
     end
     #
     ## inversion of sigmoid for gamma
@@ -1340,6 +1340,12 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     for i=1:dim
         for j=i+1:dim
             row_col_counter += 1
+            #
+            ## set sensible bounds to function parameters
+            if (SwitchingFunction[[i,j]].bounds[1] == [-1e100, 1e100])&(SwitchingFunction[[i,j]].bounds[2] == [-1e100, 1e100])
+                SwitchingFunction[[i,j]].bounds[1] = [0, 1e100]                     # width parameter: γ ∈ [0,infinity]
+                SwitchingFunction[[i,j]].bounds[2] = [region...]                    # position: r0 ∈ [rmin, rmax]
+            end
             #
             ## check if switching function is defined by user
             if [i,j] in keys(SwitchingFunction)
@@ -1535,6 +1541,47 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     #
     W_regularised = map(i -> U_dense_grid[i]*dU_dense_grid[i]',collect(1:size(rsolve)[1]))
     #
+    ######### PLOTTING THE GENERATOR MATRICES AND SWITCHING FUNCTIONS ##########
+    #
+    if isdefined(Main, Symbol("PyPlot"))
+        #
+        fig = plt.figure()
+        gs = fig.add_gridspec(dim,dim)
+        axs = gs.subplots(sharex=true)
+        axs[1,1].tick_params(axis="both", labelsize=8)
+        axs[2,1].tick_params(axis="both", labelsize=8)
+        #
+        for i=1:dim
+            for j=1+i:dim
+                #
+                axs[i,j].tick_params(axis="both", labelsize=8)
+                axs[i,j].plot(rgrid, [r[i,j] for r in Kf]     , linewidth=1, color =   "blue",label="Forward Evolved")
+                axs[i,j].plot(rgrid, [r[i,j] for r in Kb]     , linewidth=1, color =   "red",label="Backward Evolved")
+                axs[i,j].plot(rgrid, [r[i,j] for r in K], "--", linewidth=1, color =   "green",label="Regularised")
+                axs[i,j].set_xlim(region[1], region[2])
+                axs[i,j].set_ylabel(L"\beta_{%$i %$j}",fontsize=8)
+            end
+        end
+        #
+        ## compute and plot switching functions in bottom panels
+        k=0
+        for i=1:dim
+            for j=1+i:dim
+                k+=1
+                #
+                fij = [sigmoid_variable_gamma(rgrid[idx], g_morphed[k][idx], r0[k]) for idx=1:lastindex(rgrid)]
+                #
+                axs[j,i].tick_params(axis="both", labelsize=8)
+                axs[j,i].plot(rgrid, fij, linewidth=1, color =   "green")
+                axs[j,i].set_xlim(region[1], region[2])
+                axs[j,i].set_ylabel(L"F_{%$i %$j}",fontsize=8)
+            end
+        end
+        #
+        for i=1:dim
+            fig.delaxes(axs[i,i])
+        end
+    end
     return U, dU, UdU, K, Vd, W_regularised
 end
 #
