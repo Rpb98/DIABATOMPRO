@@ -1143,41 +1143,55 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     end
     #
     ## cost function for fitting switching function
-    function cost(rgrid, Va, Kf, Kb, dim, bounds, fit_flags, pidx, p)
+    function cost(rgrid, Va, Kf, Kb, dim, bounds, fit_flags, ptot_idx, ptot, fitting_states, pfit_idx, p)
+        penalty = 0
         #
         ## extract parameters, check if to be fit, check for bounds, and compute morphing function
         row_col_counter = 0
+        fit_row_col_counter = 0
+        flag_counter = 0
         #
         r0 = []
         #
         g_morphed = []
         #
         g_morphed_boundary = []
+        #
         for i=1:dim
             for j=i+1:dim
                 #
                 ## extract parameter for element Fij
                 row_col_counter += 1
                 #
-                idx_start, idx_end = pidx[row_col_counter]
+                idx_start, idx_end = ptot_idx[row_col_counter]
                 #
-                param_ij = p[idx_start:idx_end]
+                param_ij = ptot[idx_start:idx_end]
+                #
+                ## check to see if this coupling is being fitted
+                if [i,j] in fitting_states
+                    fit_row_col_counter += 1
+                    #
+                    idx_start, idx_end = pfit_idx[fit_row_col_counter]
+                    #
+                    fitting_param_ij = p[idx_start:idx_end]
+                    #
+                    flag_counter = 0
+                    #
+                    ## now set the parameters
+                    for (idx, flag) in enumerate(fit_flags[row_col_counter])
+                        if flag == 1
+                            flag_counter += 1
+                            param_ij[idx] = fitting_param_ij[flag_counter]
+                        end
+                    end
+                end
                 #
                 ## check to see if any parameters fall outside of the boundary windows, if so return huge cost
-                parameter_bounds = bounds[row_col_counter] #SwitchingFunction[[i,j]].bounds
+                parameter_bounds = bounds[row_col_counter]
                 outOfBounds  = [(param_ij[i] < parameter_bounds[i][1])|(param_ij[i] > parameter_bounds[i][2]) for i=1:lastindex(param_ij)]
                 #
                 if any(outOfBounds .== 1)
                     return 1e100
-                end
-                #
-                ## check which parameters are fit, if they are not to be fit set them equal to their user defined value
-                fit_flag = fit_flags[row_col_counter] #SwitchingFunction[[i,j]].fit
-                #
-                for (idx, flag) in enumerate(fit_flag)
-                    if flag != 1
-                        param_ij[idx] = SwitchingFunction[[i,j]].Rval[idx]
-                    end
                 end
                 #
                 ## assign parameters
@@ -1207,10 +1221,11 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
                 fL = sigmoid(region[1], g_morphed_boundary[row_col_counter][1], r0[row_col_counter])
                 fR = sigmoid(region[2], g_morphed_boundary[row_col_counter][2], r0[row_col_counter])
                 #
-                # if any([fL > µ, fR < 1 - µ])
-                #     println("oh no")
-                #     return 1e100
-                # end
+                if any([fL > µ, fR < 1 - µ])
+                    penalty += sigmoid(fL - µ, 50, 0) + sigmoid((1-µ) - fR, 50, 0)
+                else
+                    penalty += 0
+                end
             end
         end
         #
@@ -1223,7 +1238,7 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
         ## compute smoothness of the diabatic curves induced by U (ignore adiabatic smoothness/derivatives)
         smoothness =  SmoothnessByU(rgrid,U,Va,dim)
         #
-        return smoothness
+        return smoothness + penalty*100
     end
     #
     ## inversion of sigmoid for gamma
@@ -1310,18 +1325,26 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     #
     ## row/column counter, e.g. 1,2,3,... -> [1,2], [1,3], ... , [2,3],[2,4], ...
     row_col_counter = 0
+    fit_counter = 0
     #
     Nparams = []
     params_total = []
     param_idx = []
     #
+    N_fitting_parameters = []
+    fitting_parameters = []
+    fitting_param_idx = []
+    fitting_states = []
+    #
     ## set user defined parameters
     for i=1:dim
         for j=i+1:dim
             row_col_counter += 1
+            #
+            ## check if switching function is defined by user
             if [i,j] in keys(SwitchingFunction)
-                param_ij = SwitchingFunction[[i,j]].Rval
-            else
+                param_ij = SwitchingFunction[[i,j]].Rval                        # set parameters to user defined ones
+            else                                                                # use a black box initialiser
                 switch_ij = SWITCH([i,j],
                                     "switch",
                                     ["g0", "r0","p","beta2","beta4","B0","B1","B2"],
@@ -1336,11 +1359,39 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
                 param_ij = [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
             end
             #
+            ## number of total parameters for switching function
             push!(Nparams,length(param_ij))
             #
+            ## append all switching function parameters to a list
             append!(params_total, param_ij)
             #
+            ## push start and end indices for the switching function parameter blocks
             push!(param_idx,parameter_idx_splicer(Nparams,row_col_counter))
+            #
+            ## find which parameters remain fixed and which are to be fitted
+            fit_flag = SwitchingFunction[[i,j]].fit
+            fitting_parameters_ij = []
+            Nfit_ij = 0
+            #
+            for (idx,flag) in enumerate(fit_flag)
+                if flag == 1
+                    Nfit_ij += 1
+                    push!(fitting_parameters_ij, param_ij[idx])
+                end
+            end
+            #
+            if any(fit_flag .== 1)
+                #
+                fit_counter += 1
+                #
+                push!(fitting_states, [i,j])
+                #
+                append!(fitting_parameters, fitting_parameters_ij)
+                #
+                push!(N_fitting_parameters, Nfit_ij)
+                #
+                push!(fitting_param_idx,parameter_idx_splicer(N_fitting_parameters,fit_counter))
+            end
         end
     end
     #
@@ -1352,42 +1403,72 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     #
     ##################### FITTING THE SWITCHING FUNCTIONS ######################
     #
-    o_ = optimize(p -> cost(rgrid, 
-                            Va, 
-                            Kf, 
-                            Kb,
-                            dim, 
-                            [SwitchingFunction[[i,j]].bounds for i=1:dim-1 for j=i+1:dim], 
-                            [SwitchingFunction[[i,j]].fit    for i=1:dim-1 for j=i+1:dim], 
-                            param_idx, 
-                            p), [params_total...], options)
-    popt = Optim.minimizer(o_)
+    if length(fitting_parameters) != 0
+        o_ = optimize(p -> cost(rgrid, 
+                                Va, 
+                                Kf, 
+                                Kb,
+                                dim, 
+                                [SwitchingFunction[[i,j]].bounds for i=1:dim for j=i+1:dim],
+                                [SwitchingFunction[[i,j]].fit for i=1:dim for j=i+1:dim],
+                                param_idx,
+                                params_total,
+                                fitting_states,
+                                fitting_param_idx, 
+                                p), [fitting_parameters...], options)
+        popt = Optim.minimizer(o_)
+    else
+        popt = [NaN]
+    end
     #
     ## set the fitted parameters in the switching function fields and print the fitted parameters
     row_col_counter = 0
+    fit_row_col_counter = 0
+    flag_counter = 0
     #
     println()
     println("__OPTIMISED REFERENCE GAMMA PARAMETERS__")
     for i=1:dim
         for j=i+1:dim
+            #
+            ## extract parameter for element Fij
             row_col_counter += 1
             #
             idx_start, idx_end = param_idx[row_col_counter]
             #
-            fitted_params_ij = popt[idx_start:idx_end]
+            param_ij = params_total[idx_start:idx_end]
             #
-            SwitchingFunction[[i,j]].fitted_parameters = fitted_params_ij
+            ## check to see if this coupling is being fitted
+            if [i,j] in fitting_states
+                fit_row_col_counter += 1
+                #
+                idx_start, idx_end = fitting_param_idx[fit_row_col_counter]
+                #
+                fitted_param_ij = popt[idx_start:idx_end]
+                #
+                flag_counter = 0
+                #
+                ## now set the parameters
+                for (idx, flag) in enumerate(SwitchingFunction[[i,j]].fit)
+                    if flag == 1
+                        flag_counter += 1
+                        param_ij[idx] = fitted_param_ij[flag_counter]
+                    end
+                end
+            end
+            #
+            SwitchingFunction[[i,j]].fitted_parameters = param_ij
             #
             ## print the parameters for the user
             println("< ",i," | F | ",j," > :")
             println("---------------")
-            println("g0"   , i, j, " = ", fitted_params_ij[1])
-            println("r0"   , i, j, " = ", fitted_params_ij[2])
-            println("p"    , i, j, " = ", fitted_params_ij[3])
-            println("beta2", i, j, " = ", fitted_params_ij[4])
-            println("beta4", i, j, " = ", fitted_params_ij[5])
-            for d=1:lastindex(fitted_params_ij[6:end])
-                println("B", d-1, " = ", fitted_params_ij[6:end][d])
+            println("g0_"   , i, j, " = ", param_ij[1])
+            println("r0_"   , i, j, " = ", param_ij[2])
+            println("p_"    , i, j, " = ", param_ij[3])
+            println("beta2_", i, j, " = ", param_ij[4])
+            println("beta4_", i, j, " = ", param_ij[5])
+            for d=1:lastindex(param_ij[6:end])
+                println("B", d-1, " = ", param_ij[6:end][d])
             end
             println()
         end
