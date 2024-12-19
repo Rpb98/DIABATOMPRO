@@ -16,7 +16,7 @@ end
 
 
 save
-	as duo 
+	as dataframe
 	jrot 0
 	vmax 1000
 	nroots 250

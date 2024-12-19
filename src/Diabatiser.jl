@@ -2430,15 +2430,15 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         for j=i:dim
                             if ("spin-orbit",[i,j]) in keys(Hamiltonian)
                                 if rep == "adi"
-                                    df_W[!,"<"*string(i)*"|SO|"*string(j)*">"] = Objects["spin-orbit"][:,i,j]
+                                    df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Objects["spin-orbit"][:,i,j]
                                 else
-                                    df_W[!,"<"*string(i)*"|SO|"*string(j)*">"] = Diabatic_Objects["spin-orbit"][:,i,j]
+                                    df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Diabatic_Objects["spin-orbit"][:,i,j]
                                 end
                             end
                         end
                     end
                     #
-                    CSV.write("spin-orbit"*rep*".dat", df_SO)
+                    CSV.write("spin-orbit_"*rep*".dat", df_SO)
                 #
                 elseif property == "dipole"
                     df_DM = DataFrame()
@@ -2462,9 +2462,9 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                     df_LX[!,"R"] = r
                     for i=1:dim
                         for j=i:dim
-                            if ("Lx",[i,j]) in keys(Hamiltonian)
+                            if ("LX",[i,j]) in keys(Hamiltonian)
                                 if rep == "adi"
-                                    df_XLX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Objects["lx"][:,i,j]
+                                    df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Objects["lx"][:,i,j]
                                 else
                                     df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Diabatic_Objects["lx"][:,i,j]
                                 end
@@ -2472,7 +2472,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write("Lx"*rep*".dat", df_LX)
+                    CSV.write("Lx_"*rep*".dat", df_LX)
                 end
             end
         end
