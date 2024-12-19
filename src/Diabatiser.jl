@@ -1827,7 +1827,7 @@ function run_diabatiser(diabMethod)
                 end
             end
             #
-            Diabatic_Objects[p] = Diabatic_PropMat
+            Diabatic_Objects[lowercase(p)] = Diabatic_PropMat
         end
     end
     end
