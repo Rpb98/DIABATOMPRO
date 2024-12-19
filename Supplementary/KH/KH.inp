@@ -5866,7 +5866,7 @@ poten 7
 name [1]^3Pi
 symmetry +
 lambda 1
-mult 1
+mult 3
 type grid
 units angstrom cm-1
 values
@@ -6840,7 +6840,7 @@ end
 spin-orbit 6 7
 name <[1]1Pi|LSZ|[1]3Pi>  
 spin 0 1
-sigma 0 1
+sigma 0 0
 lambda 1 1
 <x|Lz|y>  -i -i
 type grid
@@ -12262,7 +12262,7 @@ end
 spin-orbit-x 4 7
 name <[1]3Sig+|LSX|[1]3Pi>  
 spin 1 1
-sigma 1 1
+sigma 0 1
 lambda 0 1
 <x|Lz|y>  0 -i
 type grid
@@ -13028,7 +13028,7 @@ end
 spin-orbit-x 5 7
 name <[2]3Sig+|LSX|[1]3Pi>  
 spin 1 1
-sigma 1 1
+sigma 0 1
 lambda 0 1
 <x|Lz|y>  0 -i
 type grid

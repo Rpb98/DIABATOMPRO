@@ -25,7 +25,7 @@ end
 symmetry Cs(M)
 
 poten 1
-name '[1]^1Sigma+'
+name "[1]^1Sigma+"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -2035,7 +2035,7 @@ values
 end
 
 poten 2
-name '[2]^1Sigma+'
+name "[2]^1Sigma+"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -4045,7 +4045,7 @@ values
 end
 
 poten 3
-name '[3]^1Sigma+'
+name "[3]^1Sigma+"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -6055,7 +6055,7 @@ values
 end
 
 poten 4
-name '[1]^3Sigma+'
+name "[1]^3Sigma+"
 symmetry +
 lambda 0.0
 mult 3.0
@@ -8065,7 +8065,7 @@ values
 end
 
 poten 5
-name '[2]^3Sigma+'
+name "[2]^3Sigma+"
 symmetry +
 lambda 0.0
 mult 3.0
@@ -10075,7 +10075,7 @@ values
 end
 
 poten 6
-name '[1]^1Pi'
+name "[1]^1Pi"
 symmetry +
 lambda 1.0
 mult 1.0
@@ -12085,10 +12085,10 @@ values
 end
 
 poten 7
-name '[1]^3Pi'
+name "[1]^3Pi"
 symmetry +
 lambda 1.0
-mult 1.0
+mult 3.0
 type  grid
 values
 	 1.2100000000000000 	 66754.9533522950077895 
@@ -14095,7 +14095,7 @@ values
 end
 
 diabatic 1 1
-name '< 1 | ∇ | 1 >'
+name "< 1 | ∇ | 1 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -16106,7 +16106,7 @@ values
 end
 
 NAC 1 2
-name '<1|d/dr|2>'
+name "<1|d/dr|2>"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -18116,7 +18116,7 @@ values
 end
 
 diabatic 1 2
-name '< 1 | ∇ | 2 >'
+name "< 1 | ∇ | 2 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -20127,7 +20127,7 @@ values
 end
 
 NAC 1 3
-name '<1|d/dr|3>'
+name "<1|d/dr|3>"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -22137,7 +22137,7 @@ values
 end
 
 diabatic 1 3
-name '< 1 | ∇ | 3 >'
+name "< 1 | ∇ | 3 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -24148,7 +24148,7 @@ values
 end
 
 diabatic 2 2
-name '< 2 | ∇ | 2 >'
+name "< 2 | ∇ | 2 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -26159,7 +26159,7 @@ values
 end
 
 NAC 2 3
-name '<1|d/dr|2>'
+name "<1|d/dr|2>"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -28169,7 +28169,7 @@ values
 end
 
 diabatic 2 3
-name '< 2 | ∇ | 3 >'
+name "< 2 | ∇ | 3 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -30180,7 +30180,7 @@ values
 end
 
 diabatic 3 3
-name '< 3 | ∇ | 3 >'
+name "< 3 | ∇ | 3 >"
 symmetry +
 lambda 0.0
 mult 1.0
@@ -32191,13 +32191,13 @@ values
 end
 
 spin-orbit-x 1 7
-name '< 1 | SO | 7 >'
-symmetry + +
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 1 | SO | 7 >"
+spin 0.0 1.0
+sigma 0.0 1.0
+lambda 0 1
 <x|Lz|y> 0 -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 27.0873775553369924 
 	 1.2193950000000000 	 27.1503976946567533 
@@ -34203,13 +34203,13 @@ values
 end
 
 spin-orbit-x 2 7
-name '< 2 | SO | 7 >'
-symmetry + +
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 2 | SO | 7 >"
+spin 0.0 1.0
+sigma 0.0 1.0
+lambda 0 1
 <x|Lz|y> 0 -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 -25.9570890917009969 
 	 1.2193950000000000 	 -25.6688055467640623 
@@ -36215,13 +36215,13 @@ values
 end
 
 spin-orbit-x 3 7
-name '< 3 | SO | 7 >'
-symmetry + +
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 3 | SO | 7 >"
+spin 0.0 1.0
+sigma 0.0 1.0
+lambda 0 1
 <x|Lz|y> 0 -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 0.0450600270980000 
 	 1.2193950000000000 	 -0.1182085902149653 
@@ -38227,13 +38227,13 @@ values
 end
 
 spin-orbit-x 4 7
-name '< 4 | SO | 7 >'
-symmetry + +
-lambda 0.0 1.0
-mult 3.0 1.0
+name "< 4 | SO | 7 >"
+spin 1.0 1.0
+sigma 0.0 1.0
+lambda 0 1
 <x|Lz|y> 0 -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 -9.7717729626719994 
 	 1.2193950000000000 	 -9.7291565583409358 
@@ -40239,13 +40239,13 @@ values
 end
 
 spin-orbit-x 5 7
-name '< 5 | SO | 7 >'
-symmetry + +
-lambda 0.0 1.0
-mult 3.0 1.0
+name "< 5 | SO | 7 >"
+spin 1.0 1.0
+sigma 0.0 1.0
+lambda 0 1
 <x|Lz|y> 0 -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 7.2552795790639992 
 	 1.2193950000000000 	 7.1381738883083745 
@@ -42251,13 +42251,13 @@ values
 end
 
 spin-orbit-x 6 7
-name '< 6 | SO | 7 >'
-symmetry + +
-lambda 1.0 1.0
-mult 1.0 1.0
+name "< 6 | SO | 7 >"
+spin 0.0 1.0
+sigma 0.0 0.0
+lambda 1 1
 <x|Lz|y> -i -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 -17.9849937052769988 
 	 1.2193950000000000 	 -17.9414170250972091 
@@ -44263,13 +44263,13 @@ values
 end
 
 spin-orbit 7 7
-name '< 7 | SO | 7 >'
-symmetry + +
-lambda 1.0 1.0
-mult 1.0 1.0
+name "< 7 | SO | 7 >"
+spin 1.0 1.0
+sigma 1.0 1.0
+lambda 1 1
 <x|Lz|y> -i -i
 type  grid
-factor 1
+factor i
 values
 	 1.2100000000000000 	 -18.6227452807399949 
 	 1.2193950000000000 	 -18.5910260114540264 
@@ -46275,10 +46275,9 @@ values
 end
 
 dipole 1 1
-name '< 1 | DM | 1 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 1 | DM | 1 >"
+lambda 0 0
+mult 1 1
 type  grid
 factor 1
 values
@@ -48286,10 +48285,10 @@ values
 end
 
 dipole-x 1 2
-name '< 1 | DM | 2 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 1 | DM | 2 >"
+lambda 0 0
+mult 1 1
+<x|Lz|y> 0 0
 type  grid
 factor 1
 values
@@ -50297,10 +50296,10 @@ values
 end
 
 dipole-x 1 3
-name '< 1 | DM | 3 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 1 | DM | 3 >"
+lambda 0 0
+mult 1 1
+<x|Lz|y> 0 0
 type  grid
 factor 1
 values
@@ -52308,9 +52307,9 @@ values
 end
 
 dipole-x 1 6
-name '< 1 | DM | 6 >'
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 1 | DM | 6 >"
+lambda 0 1
+mult 1 1
 <x|Lz|y> 0 -i
 type  grid
 factor 1
@@ -54319,10 +54318,9 @@ values
 end
 
 dipole 2 2
-name '< 2 | DM | 2 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 2 | DM | 2 >"
+lambda 0 0
+mult 1 1
 type  grid
 factor 1
 values
@@ -56330,10 +56328,10 @@ values
 end
 
 dipole-x 2 3
-name '< 2 | DM | 3 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 2 | DM | 3 >"
+lambda 0 0
+mult 1 1
+<x|Lz|y> 0 0
 type  grid
 factor 1
 values
@@ -58341,9 +58339,9 @@ values
 end
 
 dipole-x 2 6
-name '< 2 | DM | 6 >'
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 2 | DM | 6 >"
+lambda 0 1
+mult 1 1
 <x|Lz|y> 0 -i
 type  grid
 factor 1
@@ -60352,10 +60350,9 @@ values
 end
 
 dipole 3 3
-name '< 3 | DM | 3 >'
-lambda 0.0 0.0
-mult 1.0 1.0
-<x|Lz|y> 0.0i 0.0i
+name "< 3 | DM | 3 >"
+lambda 0 0
+mult 1 1
 type  grid
 factor 1
 values
@@ -62363,9 +62360,9 @@ values
 end
 
 dipole-x 3 6
-name '< 3 | DM | 6 >'
-lambda 0.0 1.0
-mult 1.0 1.0
+name "< 3 | DM | 6 >"
+lambda 0 1
+mult 1 1
 <x|Lz|y> 0 -i
 type  grid
 factor 1
@@ -64374,10 +64371,9 @@ values
 end
 
 dipole 4 4
-name '< 4 | DM | 4 >'
-lambda 0.0 0.0
-mult 3.0 3.0
-<x|Lz|y> 0.0i 0.0i
+name "< 4 | DM | 4 >"
+lambda 0 0
+mult 3 3
 type  grid
 factor 1
 values
@@ -66385,10 +66381,10 @@ values
 end
 
 dipole-x 4 5
-name '< 4 | DM | 5 >'
-lambda 0.0 0.0
-mult 3.0 3.0
-<x|Lz|y> 0.0i 0.0i
+name "< 4 | DM | 5 >"
+lambda 0 0
+mult 3 3
+<x|Lz|y> 0 0
 type  grid
 factor 1
 values
@@ -68396,9 +68392,9 @@ values
 end
 
 dipole-x 4 7
-name '< 4 | DM | 7 >'
-lambda 0.0 1.0
-mult 3.0 1.0
+name "< 4 | DM | 7 >"
+lambda 0 1
+mult 3 3
 <x|Lz|y> 0 -i
 type  grid
 factor 1
@@ -70407,10 +70403,9 @@ values
 end
 
 dipole 5 5
-name '< 5 | DM | 5 >'
-lambda 0.0 0.0
-mult 3.0 3.0
-<x|Lz|y> 0.0i 0.0i
+name "< 5 | DM | 5 >"
+lambda 0 0
+mult 3 3
 type  grid
 factor 1
 values
@@ -72418,9 +72413,9 @@ values
 end
 
 dipole-x 5 7
-name '< 5 | DM | 7 >'
-lambda 0.0 1.0
-mult 3.0 1.0
+name "< 5 | DM | 7 >"
+lambda 0 1
+mult 3 3
 <x|Lz|y> 0 -i
 type  grid
 factor 1
@@ -74429,10 +74424,9 @@ values
 end
 
 dipole 6 6
-name '< 6 | DM | 6 >'
-lambda 1.0 1.0
-mult 1.0 1.0
-<x|Lz|y> 1.0i 1.0i
+name "< 6 | DM | 6 >"
+lambda 1 1
+mult 1 1
 type  grid
 factor 1
 values
@@ -76440,10 +76434,9 @@ values
 end
 
 dipole 7 7
-name '< 7 | DM | 7 >'
-lambda 1.0 1.0
-mult 1.0 1.0
-<x|Lz|y> 1.0i 1.0i
+name "< 7 | DM | 7 >"
+lambda 1 1
+mult 3 3
 type  grid
 factor 1
 values

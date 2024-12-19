@@ -14,6 +14,8 @@ using SpecialFunctions
 using Trapz
 using DataFrames
 using CSV
+using Printf
+using LaTeXStrings
 #
 ## legacy libraries
 # using Dates

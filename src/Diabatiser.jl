@@ -1926,10 +1926,10 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         S = V.mult
         #
         println(io, "poten " * string(state))
-        println(io, "name '" * name * "'")
+        println(io, "name \"" * name * "\"")
         println(io, "symmetry " * symmetry)
-        println(io, "lambda " * string(L))
-        println(io, "mult " * string(S))
+        println(io, "lambda " * string(Int(L)))
+        println(io, "mult " * string(Int(S)))
         println(io, "type  grid")
         println(io, "values")
         #
@@ -1957,7 +1957,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         S = V.mult
         #
         println(io, "NAC " * string(i) * " " * string(j))
-        println(io, "name '" * name * "'")
+        println(io, "name \"" * name * "\"")
         println(io, "symmetry " * symmetry)
         println(io, "lambda " * string(L))
         println(io, "mult " * string(S))
@@ -1986,7 +1986,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         name = "< "*string(i)*" | ∇ | "*string(j)*" >"
         #
         println(io, "diabatic " * string(i) * " " * string(j))
-        println(io, "name '" * name * "'")
+        println(io, "name \"" * name * "\"")
         println(io, "symmetry " * symmetry)
         println(io, "lambda " * string(L))
         println(io, "mult " * string(S))
@@ -2016,7 +2016,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         name = "< "*string(i)*" | DC | "*string(j)*" >"
         #
         println(io, "diabat " * string(i) * " " * string(j))
-        println(io, "name '" * name * "'")
+        println(io, "name \"" * name * "\"")
         println(io, "symmetry " * symmetry)
         println(io, "lambda " * string(L))
         println(io, "mult " * string(S))
@@ -2034,7 +2034,13 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
     end
     #
     function write_SOC(io,r,i,j,SO_Matrix)
-        SO = Hamiltonian[("spin-orbit",[i,j])]
+        SO = SpinOrbit[[i,j]] #Hamiltonian[("spin-orbit",[i,j])]
+        #
+        spin = SO.spin
+        spin = [string(spin[1])," ",string(spin[2])]
+        #
+        sigma = SO.sigma
+        sigma = [string(sigma[1])," ",string(sigma[2])]
         #
         Lz = SO.Lz
         Lz = [string(Lz[1])," ",string(Lz[2])]
@@ -2057,9 +2063,9 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         symmetry = [symmetryi," ",symmetryj]
         #
-        L = [string(Li)," ",string(Lj)]
+        L = [string(Int(Li))," ",string(Int(Lj))]
         #
-        S = [string(Si)," ",string(Sj)]
+        S = [string(Int(Si))," ",string(Int(Sj))]
         #
         ## object name
         name = "< "*string(i)*" | SO | "*string(j)*" >"
@@ -2070,13 +2076,13 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
             println(io, "spin-orbit " * string(i) * " " * string(j))
         end
         #
-        println(io, "name '" * name * "'")
-        println(io, "symmetry " * join(symmetry))
+        println(io, "name \"" * name * "\"")
+        println(io, "spin " * join(spin))
+        println(io, "sigma " * join(sigma))
         println(io, "lambda " * join(L))
-        println(io, "mult " * join(S))
         println(io, "<x|Lz|y> " * join(Lz))
         println(io, "type  grid")
-        println(io, "factor 1")
+        println(io, "factor i")
         println(io, "values")
         #
         for idx=1:size(r)[1]
@@ -2090,7 +2096,10 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
     end
     #
     function write_EAM(io,r,i,j,Lx_Matrix)
-        Lx = Hamiltonian[("lx",[i,j])]
+        Lx = EAMC[[i,j]] #Hamiltonian[("lx",[i,j])]
+        #
+        spin = Lx.spin
+        spin = [string(spin[1])," ",string(spin[2])]
         #
         Lz = Lx.Lz
         Lz = [string(Lz[1])," ",string(Lz[2])]
@@ -2113,21 +2122,21 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         # symmetry = [symmetryi," ",symmetryj]
         #
-        L = [string(Li)," ",string(Lj)]
+        L = [string(Int(Li))," ",string(Int(Lj))]
         #
-        S = [string(Si)," ",string(Sj)]
+        S = [string(Int(Si))," ",string(Int(Sj))]
         #
         ## object name
         name = "< "*string(i)*" | Lx | "*string(j)*" >"
         #
         println(io, "Lx " * string(i) * " " * string(j))
-        println(io, "name '" * name * "'")
-        # println(io, "symmetry " * join(symmetry))
+        println(io, "name \"" * name * "\"")
+        println(io, "spin " * join(spin))
         println(io, "lambda " * join(L))
-        println(io, "mult " * join(S))
+        # println(io, "mult " * join(S))
         println(io, "<x|Lz|y> " * join(Lz))
         println(io, "type  grid")
-        println(io, "factor 1")
+        println(io, "factor i")
         println(io, "values")
         #
         for idx=1:size(r)[1]
@@ -2163,29 +2172,32 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         # symmetry = [symmetryi," ",symmetryj]
         #
-        L = [string(Li)," ",string(Lj)]
+        L = [string(Int(Li))," ",string(Int(Lj))]
         #
-        S = [string(Si)," ",string(Sj)]
+        S = [string(Int(Si))," ",string(Int(Sj))]
         #
-        Lz_arr = [string(Int(Li))*"i",string(Int(Lj))*"i"]
-        if Li == 0.0
-            Lz_arr[1] = "0"
-        elseif Lj == 0
-            Lz_arr[3] = "0"
-        end
+        Lz_arr = [string(Int(Li))*"i"," ",string(Int(Lj))*"i"]
+        # if Li == 0.0
+        #     Lz_arr[1] = "0"
+        # elseif Lj == 0
+        #     Lz_arr[2] = "0"
+        # end
         #
         if Lz[1] == "N/A"
-            Lz_arr[1] = string(Li)*"i"
+            if Li == 0.0
+                Lz_arr[1] = "0"
+            end
         else
             Lz_arr[1] = Lz[1]
         end
-        if Lz[2] == "N/A"
-            Lz_arr[2] = string(Lj)*"i"
-        else
-            Lz_arr[2] = Lz[2]
-        end
         #
-        Lz = [string(Lz_arr[1])," ",string(Lz_arr[2])]
+        if Lz[2] == "N/A"
+            if Lj == 0.0
+                Lz_arr[3] = "0"
+            end
+        else
+            Lz_arr[3] = Lz[2]
+        end
         #
         ## object name
         name = "< "*string(i)*" | DM | "*string(j)*" >"
@@ -2196,11 +2208,13 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
             println(io, "dipole " * string(i) * " " * string(j))
         end
         #
-        println(io, "name '" * name * "'")
+        println(io, "name \"" * name * "\"")
         # println(io, "symmetry " * join(symmetry))
         println(io, "lambda " * join(L))
         println(io, "mult " * join(S))
-        println(io, "<x|Lz|y> " * join(Lz))
+        if i!=j
+            println(io, "<x|Lz|y> " * join(Lz_arr))
+        end
         println(io, "type  grid")
         println(io, "factor 1")
         println(io, "values")
