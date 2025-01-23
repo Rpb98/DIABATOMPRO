@@ -1341,16 +1341,11 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
         for j=i+1:dim
             row_col_counter += 1
             #
-            ## set sensible bounds to function parameters
-            if (SwitchingFunction[[i,j]].bounds[1] == [-1e100, 1e100])&(SwitchingFunction[[i,j]].bounds[2] == [-1e100, 1e100])
-                SwitchingFunction[[i,j]].bounds[1] = [0, 1e100]                     # width parameter: γ ∈ [0,infinity]
-                SwitchingFunction[[i,j]].bounds[2] = [region...]                    # position: r0 ∈ [rmin, rmax]
-            end
-            #
             ## check if switching function is defined by user
             if [i,j] in keys(SwitchingFunction)
                 param_ij = SwitchingFunction[[i,j]].Rval                        # set parameters to user defined ones
-            else                                                                # use a black box initialiser
+            else 
+                println(row_col_counter)                                                              # use a black box initialiser
                 switch_ij = SWITCH([i,j],
                                     "switch",
                                     ["g0", "r0","p","beta2","beta4","B0","B1","B2"],
@@ -1363,6 +1358,13 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
                 SwitchingFunction[[i,j]] = switch_ij
                 #
                 param_ij = [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
+            end
+            #
+            #
+            ## set sensible bounds to function parameters
+            if (SwitchingFunction[[i,j]].bounds[1] == [-1e100, 1e100])&(SwitchingFunction[[i,j]].bounds[2] == [-1e100, 1e100])
+                SwitchingFunction[[i,j]].bounds[1] = [0, 1e100]                     # width parameter: γ ∈ [0,infinity]
+                SwitchingFunction[[i,j]].bounds[2] = [region...]                    # position: r0 ∈ [rmin, rmax]
             end
             #
             ## number of total parameters for switching function

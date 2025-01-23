@@ -128,6 +128,14 @@ struct Save
 	nroots :: String
 end
 #
+## create a vibronic wavefunction class
+struct psi_v
+    electronic_state :: Int
+    v :: Int
+    r :: Array{Float64}
+    val :: Array{Float64}
+end
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ OBJECT CLASS METHODS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 ## define operators
