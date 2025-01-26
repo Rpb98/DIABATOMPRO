@@ -258,7 +258,7 @@ end
 ```math
 \begin{align*}
 \begin{pmatrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{pmatrix}
-\end{align}
+\end{align*}
 ```
 #### The Save Block
 The results of the diabatisation can be saved in different formats, and are specified via the following block:
