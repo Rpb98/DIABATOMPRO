@@ -248,9 +248,9 @@ end
 
     * `backward-evolution`: An AtDT is computed via the formal exponential line-integral propagator method. The `backward` card means a solution for the AtDT is evolved backwards from a boundary condition at long bond lengths (usually a signed permutation matrix) to shorter stretches. The user can specify the large-stretch boundary condition by the card `r_boundary_condition` (see card later for syntax). If this is left blank, instead a forwards evolved solution is computed, and the closest signed permutation matrix to the forwards solution at the boundary is taken.
 
-    * `evolution`: Two AtDTs are computed via the formal exponential line-integral propagator method via a `forward`  and `backward` evolution from the physical (or specified) boundary conditions. Because of the inconsistency of the NACs between eachother and the molecular properties, the `forward`  and `backward` evolved solutions do not neccesarily align. To fix this, a regualrising correction to the NACs are computed via connection of the associated generator matrices (Lie algebras $\mathfrak{so}(N)$) such that the diabatic properties remain smooth. As a result, a smooth set of diabatic properties are ensured to have the correct assymptotic limits, a new set of corrected NACs are computed, and a new AtDT which satisfies both boundary conditions is generateed. [A papers detailing the method is currently in preperation](https://www.researchgate.net/profile/Ryan_Brady13).
+    * `evolution`: Two AtDTs are computed via the formal exponential line-integral propagator method via a `forward`  and `backward` evolution from the physical (or specified) boundary conditions. Because of the inconsistency of the NACs between eachother and the molecular properties, the `forward`  and `backward` evolved solutions do not neccesarily align. To fix this, a regualrising correction to the NACs are computed via connection of the associated generator matrices (Lie algebras) such that the diabatic properties remain smooth. As a result, a smooth set of diabatic properties are ensured to have the correct assymptotic limits, a new set of corrected NACs are computed, and a new AtDT which satisfies both boundary conditions is generateed. [A papers detailing the method is currently in preperation](https://www.researchgate.net/profile/Ryan_Brady13).
     
-* `regularisation` - the molecular property used in the regularisation procedure provoked by the `diabatisation evolution` card who's diabatic representation will be made smoot. This can be any object of the following: `potential`, `dipole`, `spin-orbit`, `lx`. 
+* `regularisation` - the molecular property used in the regularisation procedure provoked by the `diabatisation evolution` card who's diabatic representation will be made smooth. This can be any object of the following: `potential`, `dipole`, `spin-orbit`, `lx`. 
 
 * `grid_resolution` - parameter specifying the coursness of the grid used in solution of the AtDT through evolution. It gives the order of magnitude in grid point seperation. This grid usually needs to be very dense for an accurate solution to the AtDT ($\sim10^{-5}$ Å) and would be inefficient/cumbersome to define a grid in the `grid` block with such a small grid seperation. The AtDT is then splined onto the global grid defined in the `grid` block.
 
@@ -704,6 +704,27 @@ values
 end
 ```
 This will fit only the width $\gamma$ and the peak position $r_0$ of the lorentzian. `fit` can be placed on any parameter, which will be fitted to ensure smooth diabatic potentials.
+
+Parameter bounds can also be included for the optimization by listing them after the `fit` key as so
+```
+parameter value fit Left-Bound Right-Bound
+```
+Using the previous NAC example, if we want to fit the NAC centroid position between 1 and 2 Angstroms, we'd have the following
+```
+NAC 1 2
+name <1|d/dr|2>
+spin 0.0 0.0
+sigma 0.0 0.0
+lambda 0 0
+type gaussian
+factor 1.0
+values 
+    gamma 0.01466346
+    r0    1.22717420 fit 1 2
+    N     1.00000000
+end
+```
+### Fitting N-State System Generator Switching Functions
 
 
 
