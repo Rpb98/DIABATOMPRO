@@ -529,10 +529,7 @@ $$f(r;r_0,\tilde{\gamma},N) = mf_2(r;r_0,\tilde{\gamma},N)+ (1-m)f_1(r;r_0,\tild
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$, $f_2$, and $f_3$ are allowed to be any programmed function, and share the same peak position and width. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
-<!-- $$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},$$ -->
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751599.jpg" alt="equation" />
-</p>
+$$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},
 
 meaning at the crossing point the width parameter reduces to a reference width $\gamma_0$. $a>0$ will give the function a long tail left of the peak, $a<0$ will give the function a long tail right of the peak, and $a=0$ makes the function symmetric about $r_0$. 
 
