@@ -363,11 +363,11 @@ end
 
 `lorentzian` - a lorentzian profile is used to model the NAC, and is often used for its cusp-like shape. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
-  <!-- $$f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2},$$ -->
-<p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735700.jpg" alt="equation" />
-</p>
-
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2}
+\end{align*}
+```
 
 and enters the input file via the following:
 ```
@@ -389,11 +389,11 @@ end
 
 `laplacian` - a laplacian profile is used to model the NAC, and is desireable for its cusp-like shape. Typically it overestimates the NAC at the peak and underestimates the NAC in the wings. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
- <!-- $$f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735778.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),
+\end{align*}
+```
 
 and enters the input file via the following:
 ```
@@ -415,13 +415,11 @@ end
 
 `gaussian` - a gaussian profile is used to model the NAC. It is parameterised by the width, $\gamma$, the peak position, $r_0$, and amplitude $N$. It is programmed as:
 
-<!-- $$f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),$$ -->
-
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735816.jpg" alt="equation" />
-</p>
-
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),
+\end{align*}
+```
 and enters the input file via the following:
 ```
 NAC 1 2
@@ -440,36 +438,32 @@ end
 
 `lor_lap` - the geometric average of a lorentzian and laplacian mixing angle (cumulative distribution function) is used to model the NAC ([see here for details](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp03051a)). It is parameterised by two widths, $\gamma$ & $\delta$, the peak position, $r_0$, and is normalised to unit area. It is programmed as:
 
-<!-- $$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751210.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr},
+\end{align*}
+```
 
 where the mixing angle between states $i$ and $j$, $\beta^{\rm avg}_{ij}$, is
 
-<!-- $$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751280.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right),
+\end{align*}
+```
 
 where the lorentzian and laplacian mixing angles are
 
-<!-- $$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
-$$\beta^{\rm la}_{ij}=\begin{cases} 
+```math
+\begin{align*}
+\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right) \\
+\beta^{\rm la}_{ij}=\begin{cases} 
 \frac{\pi}{4}\exp(\frac{r-r_0}{\delta}) & \text{if } r < r_0, \\
 \frac{\pi}{4} & \text{if } r = r_0, \\
 \frac{\pi}{2}-\frac{\pi}{4}\exp(-\frac{r-r_0}{\delta}) & \text{if } r > r_0.
-\end{cases}$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751389.jpg" alt="equation" />
-</p>
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751415.jpg" alt="equation" />
-</p>
+\end{cases}
+\end{align*}
+```
 where the maximal overlap of the lorentzian and laplacian function is ensured when
 
 $$\delta = 1.397\times \gamma$$
