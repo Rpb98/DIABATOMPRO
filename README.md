@@ -85,6 +85,7 @@
                 <li><a href="#the-electronic-angular-momentum-block">Electronic Angula Momentum</a></li>
                 </ul>
           <li><a href="#fitting-2-state-system-nacs">Fitting NACs: The 2-State Approximation</a></li>
+	  <li><a href="#fitting-N-state-system-generator-switching-functions">Fitting Generator Switching Functions: The N-State Regularizing Correction </a></li>
     </ul>
     <li><a href="#contact">Contact Details</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
@@ -724,8 +725,43 @@ values
     N     1.00000000
 end
 ```
-### Fitting N-State System Generator Switching Functions
+### Diabatising an N-State System
+If one is trying to diabatise an $N$-state system, a numerical appraoch to determine the adiabatic-to-diabatic transformation (AtDT) is required. This code uses the typical evolution-type solver which is based on the following exponential line integral propogator
+```math
+\begin{align*}
+\mathbf{U}(r_{i+1}) = \exp{\int^{r_{i+1}}}_{r_i}\mathbf{W}^{(1)} dr} \mathbf{U}(r_i)
+\end{align*}
+```
+where $i$ is the grid point index, $\mathbf{W}^{(1)}$ is the NAC matrix, $\mathbf{U}$ is the AtDT, and a boundary value for the AtDT is thus required (see [method](#the-method-block) for more details). With a given set of NACs, it is not necessarily guaranteed that the resulting diabatisation will yield a set of physically-meaningful diabatic properties since no molecular properties enter the evolution above. As a consequence, the topology of the resulting diabatic curves and the asymptotic regions may be unphysical/non-desireable. One can attempt an evolution from both ends of the nuclear grid (unified atom limit or seperated atom limit), but these two solutions will not necessarily coincide, albeit exactly equivalent. However, a specific sert of NACs is identified to connect these two solutions such that the diabatic representation is smooth (detailed methodolgy is in a paper currently in preparation). 
 
+The `evolution` diabatization scheme attempts to compute a **regularizing correction** to the NACs to simultaneously fullfil two pragmatic aims: (1) yield a smooth and physically meanignful diabatic representation; (2) compute a diabatic representation which is exactly equivalent to the defined adiabatic representation defined by the user. This method does this by optimization of a switching function matrix which acts between both a forward and back evolved AtDT solutions
+```math
+\begin{align*}
+\tilde{\mathbf{U}}= \exp{\mathbf{F}\circ \mathbf{\beta}_b + (\mathbf{J}_N - \mathbf{F})\circ \mathbf{\beta}_f}
+\end{align*}
+```
+where $\mathbf{\beta}=ln(\mathbf{U})$ is the generator matrix, subscript 'b'/'f' refers to backward and forward ebvolved AtDT solutions, $\mathbf{J}_N$ is the all-ones matrix of dimension $N$, and $\mathbf{F}$ is a matrix of $N(N-1)/2$ unique switching functions $f_{ij} \in (0,1)$ given by
+```math
+\begin{align*}
+f_{ij} = 
+\end{align*}
+```
+
+
+Specifying this method alone will call a subroutine which will attempt to generate a suitable set of initial parameter values for the generator switching functions prior to their optimization. This is 
+```
+switch 1 2
+values 
+    g0               1.730980021425479000
+    r0               4.629814041244844500
+    p                2
+    beta2            0.100000000000000000
+    beta4            0.020000000000000000
+    B0               0.881782594855986300
+    B1               0.018628143914272883
+    B2               0.000000000000000000
+end
+```
 
 
 <!-- ROADMAP -->
