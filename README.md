@@ -257,7 +257,7 @@ end
 * `r_boundary_condition` / `l_boundary_condition` - the matrix elements of the desired boundary values of the AtDT. **r** means the long bond length (or 'right') boundary and **l** means the short bond length (or 'left') boundary. The matrix elements are listed with space delimiters, counting left/right and top/down, for example a $3\times3$ matrix would have elements listed as $M_{11}$, $M_{12}$, $M_{13}$, $M_{21}$, $M_{22}$, $M_{23}$, $M_{31}$, $M_{32}$, $M_{33}$. e.g. `0 0 -1 1 0 0 0 -1 0` as in the example would yield the following matrix:
 ```math
 \begin{align*}
-\left(\begin{matrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{matrix} \right)
+\Bigg(\begin{matrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{matrix} \Bigg)
 \end{align*}
 ```
 #### The Save Block
