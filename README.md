@@ -196,7 +196,11 @@ After running the above function, a diabatic representation of your input adiaba
 
 * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
-<!-- $$\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}$$ -->
+```math
+\begin{align*}
+\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}
+\end{align*}
+```
 
 <p align="center">
   <img src="https://www.sciweavers.org/download/Tex2Img_1728729464.jpg" alt="equation" />
