@@ -490,11 +490,7 @@ sub-types f1 f2
 ```
 In this case the two functions $f_1$ and $f_2$ are mixed in the following linear combination
 
-<!-- $$f = mf_2 + (1-m)f_1$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751530.jpg" alt="equation" />
-</p>
+$$f = mf_2 + (1-m)f_1$$
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$ and $f_2$ are allowed to be any programmed function, and share the same peak position $r_0$, width $\gamma$, and amplitude $N$. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
