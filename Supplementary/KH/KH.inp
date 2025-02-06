@@ -9,7 +9,7 @@ method
     states 1 2 3
 	diabatisation evolution
 	regularisation potential
-	grid_resolution 0.001
+	grid_resolution 50000
 	r_boundary_condition 0 1 0 0 0 -1 -1 0 0
 	abinitio_fit false
 end

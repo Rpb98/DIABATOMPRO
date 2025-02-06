@@ -34,7 +34,7 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-fname = "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp"
+fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
 read_file(fname)
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 # include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
@@ -65,7 +65,7 @@ if Calculation["method"].abinitio_fit == true
 elseif Calculation["method"].abinitio_fit == false
     U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
     #
-    fig, axs = plt.subplots(2,1,sharex=true,figsize=[8,8])
+    fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
 
     plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -77,23 +77,51 @@ elseif Calculation["method"].abinitio_fit == false
         end
     end
 
-    # axs[1,1].set_xlabel("Bond Length")
-    axs[1,1].set_ylabel("Potential, cm-1")
+    # axs[1,1].plot(r,Diabatic_Objects["potential"][:,2,2], color="green",label= L"$V^{\rm (d)}_1$")
+    # axs[1,1].plot(r,Diabatic_Objects["potential"][:,3,3], color="orange",label=L"$V^{\rm (d)}_2$")
+    # axs[1,1].plot(r,Objects["potential"][:,2,2],color="red","--")
+    # axs[1,1].plot(r,Objects["potential"][:,3,3],color="blue","--")
+
+    # inset_ax = fig.add_axes([0.6, 0.6, 0.25, 0.25])  # [left, bottom, width, height]
+
+    # inset_ax.plot(r,Diabatic_Objects["potential"][:,2,2], color="green")
+    # inset_ax.plot(r,Diabatic_Objects["potential"][:,3,3], color="orange")
+    # inset_ax.plot(r,Objects["potential"][:,2,2],color="red","--")
+    # inset_ax.plot(r,Objects["potential"][:,3,3],color="blue","--")
+
+    # inset_ax.set_xlim(1.8, 2.1)  # Zoom into x-range
+    # inset_ax.set_ylim(50000,63000)  # Zoom into y-range
+
+    # axs[1,1].plot([1.8,1.8],[5e4,6.3e4], color="grey"     ,alpha=0.5)
+    # axs[1,1].plot([2.1,2.1],[5e4,6.3e4], color="grey"     ,alpha=0.5)
+    # axs[1,1].plot([1.8,2.1],[5e4,5e4], color="grey"       ,alpha=0.5)
+    # axs[1,1].plot([1.8,2.1],[6.3e4,6.3e4], color="grey"   ,alpha=0.5)
+    # axs[1,1].plot([2.1,2.668],[5e4,5e4], color="grey"     ,alpha=0.5)
+    # axs[1,1].plot([2.1,2.668],[6.3e4,7.09e4], color="grey",alpha=0.5)
+
+    # inset_ax.set_xticklabels([])  # Remove x-axis numbers
+    # inset_ax.set_yticklabels([])  # Remove y-axis numbers
+
+    # # axs[1,1].set_xlabel("Bond Length")
+    # axs[1,1].set_ylabel(L"Potential Energy, $cm^{-1}$")
 
     for i=1:dim
         for j=i+1:dim
             if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
-                axs[2,1].plot(r,Objects["nac"][:,i,j],"--",alpha=0.5)
+                # axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
+                axs[2,1].plot(r,Objects["nac"][:,i,j]) #,"--",alpha=0.5)
             end
         end
     end
 
-    axs[2,1].set_xlabel("Bond Length")
-    axs[2,1].set_ylabel("NAC, 1/Ang")
+    # axs[2,1].plot(r,Objects["nac"][:,2,3],"k") #,"--",alpha=0.5)
+
+
+    axs[2,1].set_xlabel(L"Bond Length, $\rm \AA$")
+    axs[2,1].set_ylabel(L"NAC, $\rm \AA^{-1}$")
     # plt.plot(r,Diabatic_Objects["potential"][:,3,3])
-    axs[1,1].legend()
-    axs[2,1].legend()
+    # axs[1,1].legend()
+    # axs[2,1].legend()
 
     sf = Calculation["method"].states[end]
     Emax = Objects["potential"][end,sf,sf]
@@ -102,10 +130,17 @@ elseif Calculation["method"].abinitio_fit == false
     Emin = minimum(Objects["potential"][:,si,si])
 
     axs[1,1].set_ylim(Emin,1.1*Emax)
+    # axs[1,1].set_xlim(1.35,3.5)
+
+    # plt.savefig("/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/Thesis/AtDT_method_comp/property_based_pot_guess.png",dpi=300,bbox_inches="tight")
 end
 #
 
 # save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, fname, special_name = "KH_regularised_01")
 
+
+# plt.figure()
+# plt.plot(grid[2:end],diff(grid))
+# plt.yscale("log")
 
 

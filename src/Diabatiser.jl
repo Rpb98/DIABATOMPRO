@@ -318,7 +318,7 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                 ## Generate 2x2 problem
                 a_tmp = Array{Float64}(undef, size(a)[1],2,2) 
                 for k=1:size(a)[1]
-                        a_tmp[k,:,:] = Diagonal(Array([a[k,i,i],a[k,j,j]])) 
+                        a_tmp[k,:,:] = Diagonal(Array([a[k,i,i],a[k,j,j]])) # a[k,:,:] #
                 end
                 a_tmp = [a_tmp[idx,:,:] for idx=1:lastindex(r)]
                 #
@@ -350,7 +350,7 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                         factor = NonAdiabaticCoupling[key].factor
                         #
                         ## perform optimization
-                        o_ = optimize(p -> get_loss(r, Lval, units, sub_type, factor, a_tmp, func, p_excludeFromFit, p_guess, p_bounds, p), [p_guess...],options) 
+                        o_ = optimize(p -> get_loss(collect(r), Lval, units, sub_type, factor, a_tmp, func, p_excludeFromFit, p_guess, p_bounds, p), [p_guess...],options) 
                         optimisedParameters = Optim.minimizer(o_)
                         #
                         NonAdiabaticCoupling[key].fitted_parameters .= optimisedParameters
@@ -1587,6 +1587,42 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     return U, dU, UdU, K, Vd, W_regularised
 end
 #
+function Inverse_Transform_Sampling_Grid(Npoints::Int64)::Vector{Float64}
+    rsolve, ∆ = smoothgrid(-1000,1000,r,5,1000,1000)
+    #
+    nac2_vector = Vector{Vector{Float64}}()
+    for key in keys(NonAdiabaticCoupling)
+        # if all(x -> x in block, key)
+        if check_symmetry_and_states(Int(key[1]),Int(key[2]))
+            local _, NAC
+            #
+            i, j = key[1], key[2]
+            #
+            _, NAC = ComputeProperty(NonAdiabaticCoupling[key], custom_grid = rsolve, evolution_grid = true)
+            #
+            push!(nac2_vector,(NAC .* NonAdiabaticCoupling[key].factor).^2)
+            #
+            # evoNACMat[:,i,j] =   NAC .* NonAdiabaticCoupling[key].factor
+            # evoNACMat[:,j,i] = - NAC .* NonAdiabaticCoupling[key].factor
+        end
+    end
+    #
+    ## compute the probability density function as the NAC matrix norm
+    pdf = sqrt.(sum(nac2_vector))
+    #
+    ## compute the cumulative distribution function
+    cdf = cumtrapz(rsolve,pdf)
+    cdf = cdf ./cdf[end]        # normalise to 1
+    #
+    ## find the inverse cdf and spline it
+    cdf_inverted_spline = Spline1D(cdf,rsolve)
+    #
+    ## now compute the inverse transform sample of the cdf to yield non-unifrom nuclear configuration grid
+    ITS_grid = cdf_inverted_spline(LinRange(0,1,Npoints))
+    #
+    return ITS_grid
+end
+#
 function N_state_diabatisation(block)
     dim = length(block)
     block =  sort(block, by = t -> t[1])   
@@ -1596,20 +1632,23 @@ function N_state_diabatisation(block)
     end
     #
     ## compute number of grid splits based on user input on grid resolution
-    nsplit = 0
-    ∂r = 100
-    spacing = []
-    while ∂r > Calculation["method"].grid_resolution
-        # global nsplit, ∂r
-        r_ = LinRange(r[1], r[end], gridSplitter(size(r)[1],nsplit))
-        ∂r = r_[2]-r_[1]
-        push!(spacing,∂r)
-        nsplit+=1
-    end
-    nsplit = argmin(spacing .- Calculation["method"].grid_resolution) -1
+    #### nsplit = 0
+    #### ∂r = 100
+    #### spacing = []
+    #### while ∂r > 0.0001
+    ####     # global nsplit, ∂r
+    ####     r_ = LinRange(r[1], r[end], gridSplitter(size(r)[1],nsplit))
+    ####     ∂r = r_[2]-r_[1]
+    ####     push!(spacing,∂r)
+    ####     nsplit+=1
+    #### end
+    #### nsplit = argmin(spacing .- 0.0001) -1
+    #### #
+    #### ## compute the extended grid
+    #### rsolve, ∆ = smoothgrid(-1000,1000,r,nsplit,1000,1000)
     #
-    ## compute the extended grid
-    rsolve, ∆ = smoothgrid(-1000,1000,r,nsplit,1000,1000)
+    ## compute the non-uniform grid via inverse transform sampling
+    rsolve = Inverse_Transform_Sampling_Grid(Int(Calculation["method"].grid_resolution))
     #
     ## initialse the evolving NAC matrix
     evoNACMat = zeros(length(rsolve),dim,dim)
@@ -1726,7 +1765,7 @@ function run_diabatiser(diabMethod)
     dim = length(keys(Potential))
     # perform the diabatisation
     if (lowercase(diabMethod) == "2-state-approx")|(length(Calculation["method"].states)==2)
-        U = fit_multi_diabat_2stateApprox(r, Objects["potential"])
+        U = fit_multi_diabat_2stateApprox(r,Objects["potential"]) #Objects[Calculation["method"].regularisation]
         #
         UdU = Objects["nac"]
         #

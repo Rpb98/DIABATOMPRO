@@ -256,6 +256,21 @@ function FiniteDifference(x::Vector{Float64}, y::Vector{Float64}, d_order::Int64
     return dy
 end
 #
+## cumulative integral
+function cumtrapz(X::T, Y::T) where {T <: AbstractVector}
+    # Check matching vector length
+    @assert length(X) == length(Y)
+    # Initialize Output
+    out = similar(X)
+    out[1] = 0
+    # Iterate over arrays
+    for i in 2:length(X)
+      out[i] = out[i-1] + 0.5*(X[i] - X[i-1])*(Y[i] + Y[i-1])
+    end
+    # Return output
+    out
+end
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRID FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 function gridSplitter(Ninit,Nsplit)
