@@ -143,4 +143,7 @@ end
 # plt.plot(grid[2:end],diff(grid))
 # plt.yscale("log")
 
+# plt.figure()
+
+# for keys in 
 

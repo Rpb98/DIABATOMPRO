@@ -152,7 +152,7 @@ function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_in
                 mixing_angle = mixing_angle_func.(r,p...) .* factor
         else
                 X, NACij = ComputeProperty_viaParameters(r, f, Lval, p, "NAC", units, sub_type, factor)
-                mixing_angle = map(i->trapz(r[1:i],NACij[1:i]), collect(1:size(r)[1]))
+                mixing_angle = cumtrapz(r,NACij) #map(i->trapz(r[1:i],NACij[1:i]), collect(1:size(r)[1]))
         end
         #
         ## compute the 2x2 diabatising Matrix
@@ -183,7 +183,7 @@ function compute_mixing_angle(r, f, key, p)
         else
                 X, NACij = ComputeProperty_viaParameters(r, f, NonAdiabaticCoupling[key].Lval, p, "NAC", NonAdiabaticCoupling[key].units, NonAdiabaticCoupling[key].sub_type,  NonAdiabaticCoupling[key].factor)
                 #
-                mixing_angle = map(i->trapz(X[1:i],NACij[1:i]), collect(1:size(r)[1]))
+                mixing_angle = cumtrapz(X,NACij) #map(i->trapz(X[1:i],NACij[1:i]), collect(1:size(r)[1]))
         end
         #
         return mixing_angle
@@ -416,24 +416,26 @@ function KE_error(U,dU,W; tol = 1e-12)
     return min(frobeniusNorm(Ke*2), tol) #Calculation["method"].KE_factor
 end
 #
-function Kangle(K)
-        alpha = []
-        for i=1:size(K)[1]
-            for j=i+1:size(K)[2]
-                push!(alpha,K[i,j]^2)
+function Kangle(dim::Int64, K::Matrix{Float64})::Float64
+        alpha = Vector{Float64}(undef, dim * (dim - 1) ÷ 2)
+        idx =0 
+        for i=1:dim
+            for j=i+1:dim
+                idx+=1
+                alpha[idx] = K[i,j]^2
             end
         end
         return sqrt(sum(alpha))
 end
 #
-function EvolutionOperator(rf,ri,Wf,Wi,dim,Identity)
+function EvolutionOperator(rf::Float64, ri::Float64, Wf::Matrix{Float64}, Wi::Matrix{Float64}, dim::Int, Identity::Matrix{Float64})::Matrix{Float64}
     #
     ## form the matrix of CDFs (betas) by compute of the integral matrix, approx trapzoidal rule
     K = 0.5*(rf-ri)*(Wf+Wi)
     #
     ## find the exponential of these matrices
     if dim == 3                                            # use rodriguez formular
-        alpha = Kangle(K)                                  # find the corresponding combined mixing half angle / cdf
+        alpha = Kangle(dim, K)                                  # find the corresponding combined mixing half angle / cdf
         #
         ## compute evolution matrix by rodriguez rotation formular
         evoMat = Identity - (sin(alpha)/alpha)*K + ((1-cos(alpha))/alpha^2)*K^2
@@ -441,10 +443,10 @@ function EvolutionOperator(rf,ri,Wf,Wi,dim,Identity)
         evoMat = exp(-K)
     end
     #
-    return evoMat, K
+    return evoMat
 end
 #
-function Forward_Evolution(rgrid, W, dim, BoundaryCondition)
+@everywhere function Forward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
     #
     ## compute the identity matrix
     Identity = zeros(Float64,dim,dim)
@@ -462,7 +464,7 @@ function Forward_Evolution(rgrid, W, dim, BoundaryCondition)
     for idx=2:lastindex(rgrid)
         #
         ## compute the initial evolution prior to regularisation
-        E, W_int = EvolutionOperator(rgrid[idx],rgrid[idx-1],W[idx,:,:],W[idx-1,:,:],dim,Identity)
+        E = EvolutionOperator(rgrid[idx],rgrid[idx-1],W[idx,:,:],W[idx-1,:,:],dim,Identity)
         #
         ## perform local evolution
         U[idx,:,:] = E*U[idx-1,:,:]
@@ -475,7 +477,7 @@ function Forward_Evolution(rgrid, W, dim, BoundaryCondition)
     return U, dU, UdU
 end
 #
-function Backward_Evolution(rgrid, W, dim, BoundaryCondition)
+@everywhere function Backward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
     #
     ## compute the identity matrix
     Identity = zeros(Float64,dim,dim)
@@ -493,7 +495,7 @@ function Backward_Evolution(rgrid, W, dim, BoundaryCondition)
     for idx in reverse(1:N-1)
         #
         ## compute the initial evolution prior to regularisation
-        E, W_int = EvolutionOperator(rgrid[idx],rgrid[idx+1],W[idx,:,:],W[idx+1,:,:],dim,Identity)
+        E = EvolutionOperator(rgrid[idx],rgrid[idx+1],W[idx,:,:],W[idx+1,:,:],dim,Identity)
         #
         ## perform local evolution
         U[idx,:,:] = E*U[idx+1,:,:]
@@ -975,7 +977,7 @@ function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECT
 
 end
 #
-function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = false, µ = 0.01)
+function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Ub::AbstractArray{Float64}, Va::AbstractArray{Float64}, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -1311,9 +1313,9 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     Nel = Int(dim*(dim-1)/2)
     #
     ## convert matrices to vector format
-    Uf = [Uf[i,:,:] for i=1:lastindex(Uf[:,1,1])]
-    Ub = [Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
-    Va = [Va[i,:,:] for i=1:lastindex(Va[:,1,1])]
+    Uf = collect(eachslice(Uf, dims=1)) #[Uf[i,:,:] for i=1:lastindex(Uf[:,1,1])]
+    Ub = collect(eachslice(Ub, dims=1)) #[Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
+    Va = collect(eachslice(Va, dims=1)) #[Va[i,:,:] for i=1:lastindex(Va[:,1,1])]
     #
     ## compute generators for each solution & their difference matrix
     Kf = real(log.(Uf))
@@ -1488,8 +1490,8 @@ function regularise(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECTS = 
     rsolve = DENSE_GRID_OBJECTS[1]
     Uf_dense_grid = DENSE_GRID_OBJECTS[2]
     Ub_dense_grid = DENSE_GRID_OBJECTS[3]
-    Uf_dense_grid = [ Uf_dense_grid[i,:,:] for i=1:lastindex(Uf_dense_grid[:,1,1])]
-    Ub_dense_grid = [ Ub_dense_grid[i,:,:] for i=1:lastindex(Ub_dense_grid[:,1,1])]
+    Uf_dense_grid = collect(eachslice(Uf_dense_grid,dims=1)) #[ Uf_dense_grid[i,:,:] for i=1:lastindex(Uf_dense_grid[:,1,1])]
+    Ub_dense_grid = collect(eachslice(Ub_dense_grid,dims=1)) #[ Ub_dense_grid[i,:,:] for i=1:lastindex(Ub_dense_grid[:,1,1])]
     #
     ## compute the generator matrices on the solution grid
     Kf_dense_grid = real(log.(Uf_dense_grid))
@@ -1651,7 +1653,7 @@ function N_state_diabatisation(block)
     rsolve = Inverse_Transform_Sampling_Grid(Calculation["method"].N_evo_grid_points)
     #
     ## initialse the evolving NAC matrix
-    evoNACMat = zeros(length(rsolve),dim,dim)
+    evoNACMat = zeros(Float64,length(rsolve),dim,dim)
     #
     for key in keys(NonAdiabaticCoupling)
         # if all(x -> x in block, key)
@@ -1691,18 +1693,27 @@ function N_state_diabatisation(block)
     #
     elseif (Calculation["method"].regularisation != false)&(lowercase(Calculation["method"].diabatisation) == "evolution")
             #
-            ## perform forward evolution
-            Uf, dUf, UdUf = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
-            #
-            ## determine the right boundary condition
-            if Calculation["method"].r_boundary_condition == false
-                r_boundary_condition = find_closest_permutation(Uf[end,:,:], dim)
+            ## check to see if right boundary comdition is given
+            if Calculation["method"].r_boundary_condition != false
+                #
+                ## perform parallelisation on evolutions
+                forward_evo  = Threads.@spawn Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
+                backward_evo = Threads.@spawn Backward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].r_boundary_condition)
+                #
+                ## Wait for both processes to complete and fetch results
+                Uf, dUf, UdUf = fetch(forward_evo)
+                Ub, dUb, UdUb = fetch(backward_evo)
             else
-                r_boundary_condition = Calculation["method"].r_boundary_condition
+                #
+                ## perform forward evolution
+                Uf, dUf, UdUf = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
+                #
+                ## determine the right boundary condition
+                r_boundary_condition = find_closest_permutation(Uf[end,:,:], dim)
+                #
+                ## perform backward evolution
+                Ub, dUb, UdUb = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
             end
-            #
-            ## perform backward evolution
-            Ub, dUb, UdUb = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
             #
             ## determine the adiabatic property to regualrise to
             if Calculation["method"].regularisation == false
@@ -1730,7 +1741,6 @@ function N_state_diabatisation(block)
                                                           SplineMat(rsolve, Ub, r), 
                                                           Pa, 
                                                           dim, 
-                                                          2, 
                                                           [r[1], r[end]], 
                                                           DENSE_GRID_OBJECTS = [rsolve, Uf, Ub])
             #
@@ -1776,7 +1786,7 @@ function run_diabatiser(diabMethod)
         ## U_, dU_, has elements of U_[:,i,j], UdU_ has elements in list [x[i,j] for x in UdU_]
         #
         ## populate the full dimensional U and UdU matrix
-        U = zeros(length(r),dim,dim)
+        U = zeros(Float64,length(r),dim,dim)
         for i=1:dim
             U[:,i,i] .= 1.0
         end
@@ -1827,9 +1837,11 @@ function run_diabatiser(diabMethod)
     psi_d = zeros(Float64,dim)
     diabatic_basis = []
     for i=1:dim
-        psi_d = zeros(Float64,dim)
         psi_d[i] = 1.0
-        push!(diabatic_basis, map(x -> U[x,:,:]*psi_d, collect(1:length(r))))
+        #
+        push!(diabatic_basis, map(AtDT -> AtDT * psi_d, eachslice(U, dims=1)))
+        #
+        psi_d[i] = 0.0
     end
     #
     ## diabatic properties
@@ -1858,13 +1870,14 @@ function run_diabatiser(diabMethod)
         else
             Adiabatic_PropMat = Objects[lowercase(p)]
             #
+            Diabatic_PropMat_vec = map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r)))  #zeros(Float64, length(r), dim, dim)
             Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
             #
             for i=1:dim
                 for j=1:dim
-                    Pd_ij =  Diabatic_Property_from_wavefunctions(diabatic_basis[i], diabatic_basis[j], Adiabatic_PropMat)
+                    # Pd_ij =  map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r))) #Diabatic_Property_from_wavefunctions(diabatic_basis[i], diabatic_basis[j], Adiabatic_PropMat)
                     #
-                    Diabatic_PropMat[:,i,j] = Pd_ij
+                    Diabatic_PropMat[:,i,j] = [Pd[i,j] for Pd in Diabatic_PropMat_vec]
                 end
             end
             #

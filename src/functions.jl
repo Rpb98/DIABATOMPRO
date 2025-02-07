@@ -856,7 +856,7 @@ function FiniteDiff_MatDerivative(x, M, dim, d_order)
     return dM
 end
 #
-function SplineMat(x,A,r)
+function SplineMat(x::AbstractVector{Float64},A::AbstractArray{Float64},r::AbstractVector{Float64})::AbstractArray{Float64}
     dim = size(A[1,:,:])[1]
     B = zeros(Float64,length(r),dim,dim)
     #
