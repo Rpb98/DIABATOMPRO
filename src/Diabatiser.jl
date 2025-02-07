@@ -1648,7 +1648,7 @@ function N_state_diabatisation(block)
     #### rsolve, ∆ = smoothgrid(-1000,1000,r,nsplit,1000,1000)
     #
     ## compute the non-uniform grid via inverse transform sampling
-    rsolve = Inverse_Transform_Sampling_Grid(Int(Calculation["method"].grid_resolution))
+    rsolve = Inverse_Transform_Sampling_Grid(Calculation["method"].N_evo_grid_points)
     #
     ## initialse the evolving NAC matrix
     evoNACMat = zeros(length(rsolve),dim,dim)

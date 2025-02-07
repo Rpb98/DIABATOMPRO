@@ -111,13 +111,14 @@ struct Method
     min_prominence       :: Float64
     thresh               :: Number
     diabatisation        :: String
-    grid_resolution      :: Float64
+    N_evo_grid_points    :: Int
     l_boundary_condition :: Any
     r_boundary_condition :: Any
     regularisation       :: Any
     plot                 :: Bool
     shift                :: Bool
     abinitio_fit         :: Bool
+    solve_vibronic       :: Bool
 end
 #
 ## create a diabatisation save class
@@ -131,9 +132,9 @@ end
 ## create a vibronic wavefunction class
 struct psi_v
     electronic_state :: Int
-    v :: Int
-    r :: Array{Float64}
-    val :: Array{Float64}
+    v                :: Int
+    r                :: Array{Float64}
+    val              :: Array{Float64}
 end
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ OBJECT CLASS METHODS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

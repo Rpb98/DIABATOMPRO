@@ -34,7 +34,7 @@ rmax = 6
 r = LinRange(rmin,rmax,Ngrid)
 h = r[2]-r[1]
 #
-function sinc_function(x, xj, h)
+function sinc_function(x::Float64, xj::Float64, h::Float64)::Float64
     # Avoid division by zero: handle x == x_j separately
     if abs(x - xj) < 1e-10
         return 1.0
@@ -56,7 +56,7 @@ function HarmonicOscillator(r; re = 3.5, nu = 1350, m1 = 12, m2 = 1.007825032, V
     return Ve + factor * 0.5 * mu * nu^2 * (r-re)^2
 end
 #
-function SincDVR_KinMat(vmax,r_min, r_max, factor)
+function SincDVR_KinMat(vmax::Int,r_min::Float64, r_max::Float64, factor::Float64)::Matrix{Float64}
     #
     T = zeros(Float64, vmax, vmax)
     #
@@ -79,18 +79,18 @@ function SincDVR_KinMat(vmax,r_min, r_max, factor)
     return factor * T
 end
 #
-function SincDVR_PotMat(vmax, fPot, r_min, r_max)
+function SincDVR_PotMat(vmax::Int, fPot, r_min::Float64, r_max::Float64)::Diagonal(Float64,Vector{Float64})
     #
     ## evaluate quadrature points
     R = LinRange(r_min,r_max,vmax)
     #
-    ## compute potential on the qwuadrature points
+    ## compute potential on the quadrature points
     V = Diagonal(fPot.(R))
     #
     return V
 end
 #
-function solve_vibrational_schrodinger(T, V, r, R, h, electronic_state)
+function solve_vibrational_schrodinger(T::Matrix{Float64}, V::Diagonal(Float64,Vector{Float64}), r, R, h, electronic_state)
     """
     Solve the vibrational Schrödinger equation Hψ = Eψ using DVR.
     

@@ -106,13 +106,15 @@ function initialise_input_parameters(line::String)
     #
     input_values["r_boundary_condition"] = false
     #
-    input_values["grid_resolution"] = 0.0001
+    # input_values["N_evo_grid_points"] = 50000
     #
     input_values["save"] = "false" 
     #
     input_values["plot"] = "false"
     #
     input_values["abinitio_fit"] = "false"
+    #
+    input_values["solve_vibronic"] = "false"
     #
     input_values["fit_range"] = ("-1e100","1e100")
     #
@@ -126,6 +128,9 @@ function initialise_input_parameters(line::String)
     input_values["nroots"] = "1"
     #
     ## legacy parameters
+    #
+    input_values["grid_resolution"] = 0.0001
+    #
     input_values["min_peak_distance"] = "0.2"
     #
     input_values["min_prominence"] = "8e10"
@@ -244,13 +249,14 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                         parse.(Float64,input_values["min_prominence"]),
                         parse.(Float64,input_values["thresh"]),
                         input_values["diabatisation"],
-                        parse.(Float64,input_values["grid_resolution"]),
+                        parse.(Int,input_values["n_evo_grid_points"]),
                         input_values["l_boundary_condition"],
                         input_values["r_boundary_condition"],
                         input_values["regularisation"],
                         parse.(Bool,input_values["plot"]),
                         parse.(Bool,input_values["shift"]),
-                        parse.(Bool,input_values["abinitio_fit"])
+                        parse.(Bool,input_values["abinitio_fit"]),
+                        parse.(Bool,input_values["solve_vibronic"])
                     )
         #
         Calculation["method"] = method
