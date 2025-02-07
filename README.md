@@ -85,6 +85,7 @@
                 <li><a href="#the-electronic-angular-momentum-block">Electronic Angula Momentum</a></li>
                 </ul>
           <li><a href="#fitting-2-state-system-nacs">Fitting NACs: The 2-State Approximation</a></li>
+	  <li><a href="#fitting-N-state-system-generator-switching-functions">Fitting Generator Switching Functions: The N-State Regularizing Correction </a></li>
     </ul>
     <li><a href="#contact">Contact Details</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
@@ -99,8 +100,8 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-[![Product Name Screen Shot][CH-diab]](https://www.exomol.com/)
-
+<!-- [![Product Name Screen Shot][CH-diab]](https://www.exomol.com/) -->
+h
 The (stationary) Schrodinger equation for atomistic systems is solved using the adiabatic potential energy curves (PECs) and the associated adiabatic approximation. Despite being very simplistic, this approach is very powerful and used in nearly all practical applications where the equillibrium properties of molecules are usually well represented. In cases when interactions between electronic states become important, the associated  non-adiabatic effects are taken into account via the derivative couplings (DDRs), also known as non-adiabatic couplings (NACs). For diatomic molecules, the corresponding PECs in the adiabatic representation are characterized by avoided crossings. The alternative to the adiabatic approach is the diabatic representation, obtained via a unitary transformation of the adiabatic states by minimizing the DDRs. For diatomics, the diabatic representation has zero DDR and non-diagonal diabatic couplings (DCs) ensue. The two representations are fully equivalent and so should be the rovibronic energies and wavefunctions which result from the solution of the corresponding Schrodinger equations.
 
 DIABATOMPRO is a julia code that computes the adiabatic to diabatic transformation (AtDT) for the diatomic N-coupled electronic state problem. Property based and hybrid asymptotic-property-based approaches are employed to determine the AtDT, with an easy to use interface for initialising such calculations. Furthermore, a regualarisation scheme for the non-adiabatic couplings is implemented, where they are usually not internally consistent with eachother or the associated molecular properties such as potentials and dipoles. As a result, a non-physical diabatic representation of the system ensues. Thus, the aim of the regularisation procedure is to ensure physical diabatic properties upon transformation of the adiabatic system by correction of the NACs. For a more detailed description of the problem, please see the articles: [An ab initio study of the rovibronic spectrum of sulphur monoxide (SO): diabatic vs. adiabatic representation](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp03051a), [Numerical Equivalence of Diabatic and Adiabatic Representations in Diatomic Molecules](https://pubs.acs.org/doi/10.1021/acs.jctc.3c01150), [papers in preperation](https://www.researchgate.net/profile/Ryan_Brady13).
@@ -196,17 +197,15 @@ After running the above function, a diabatic representation of your input adiaba
 
 * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
-<!-- $$\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}$$ -->
-
-<p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728729464.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+\ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}
+\end{align*}
+```
 
 * `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
@@ -250,20 +249,18 @@ end
 
     * `backward-evolution`: An AtDT is computed via the formal exponential line-integral propagator method. The `backward` card means a solution for the AtDT is evolved backwards from a boundary condition at long bond lengths (usually a signed permutation matrix) to shorter stretches. The user can specify the large-stretch boundary condition by the card `r_boundary_condition` (see card later for syntax). If this is left blank, instead a forwards evolved solution is computed, and the closest signed permutation matrix to the forwards solution at the boundary is taken.
 
-    * `evolution`: Two AtDTs are computed via the formal exponential line-integral propagator method via a `forward`  and `backward` evolution from the physical (or specified) boundary conditions. Because of the inconsistency of the NACs between eachother and the molecular properties, the `forward`  and `backward` evolved solutions do not neccesarily align. To fix this, a regualrising correction to the NACs are computed via connection of the associated generator matrices (Lie algebras $\mathfrak{so}(N)$) such that the diabatic properties remain smooth. As a result, a smooth set of diabatic properties are ensured to have the correct assymptotic limits, a new set of corrected NACs are computed, and a new AtDT which satisfies both boundary conditions is generateed. [A papers detailing the method is currently in preperation](https://www.researchgate.net/profile/Ryan_Brady13).
+    * `evolution`: Two AtDTs are computed via the formal exponential line-integral propagator method via a `forward`  and `backward` evolution from the physical (or specified) boundary conditions. Because of the inconsistency of the NACs between eachother and the molecular properties, the `forward`  and `backward` evolved solutions do not neccesarily align. To fix this, a regualrising correction to the NACs are computed via connection of the associated generator matrices (Lie algebras) such that the diabatic properties remain smooth. As a result, a smooth set of diabatic properties are ensured to have the correct assymptotic limits, a new set of corrected NACs are computed, and a new AtDT which satisfies both boundary conditions is generateed. [A papers detailing the method is currently in preperation](https://www.researchgate.net/profile/Ryan_Brady13).
     
-* `regularisation` - the molecular property used in the regularisation procedure provoked by the `diabatisation evolution` card who's diabatic representation will be made smoot. This can be any object of the following: `potential`, `dipole`, `spin-orbit`, `lx`. 
+* `regularisation` - the molecular property used in the regularisation procedure provoked by the `diabatisation evolution` card who's diabatic representation will be made smooth. This can be any object of the following: `potential`, `dipole`, `spin-orbit`, `lx`. 
 
 * `grid_resolution` - parameter specifying the coursness of the grid used in solution of the AtDT through evolution. It gives the order of magnitude in grid point seperation. This grid usually needs to be very dense for an accurate solution to the AtDT ($\sim10^{-5}$ Å) and would be inefficient/cumbersome to define a grid in the `grid` block with such a small grid seperation. The AtDT is then splined onto the global grid defined in the `grid` block.
 
 * `r_boundary_condition` / `l_boundary_condition` - the matrix elements of the desired boundary values of the AtDT. **r** means the long bond length (or 'right') boundary and **l** means the short bond length (or 'left') boundary. The matrix elements are listed with space delimiters, counting left/right and top/down, for example a $3\times3$ matrix would have elements listed as $M_{11}$, $M_{12}$, $M_{13}$, $M_{21}$, $M_{22}$, $M_{23}$, $M_{31}$, $M_{32}$, $M_{33}$. e.g. `0 0 -1 1 0 0 0 -1 0` as in the example would yield the following matrix:
-<!-- $$\begin{pmatrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{pmatrix}$$ -->
-
-<p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728730494.jpg" alt="equation" />
-</p>
-
-
+```math
+\begin{align*}
+\Bigg(\begin{matrix}0 & 0 & -1 \\ 1 & 0 & 0 \\ 0 & -1 & 0\end{matrix} \Bigg)
+\end{align*}
+```
 #### The Save Block
 The results of the diabatisation can be saved in different formats, and are specified via the following block:
 ```
@@ -367,11 +364,11 @@ end
 
 `lorentzian` - a lorentzian profile is used to model the NAC, and is often used for its cusp-like shape. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
-  <!-- $$f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2},$$ -->
-<p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735700.jpg" alt="equation" />
-</p>
-
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N}{2}\frac{\gamma}{\gamma^2+(r-r_0)^2}
+\end{align*}
+```
 
 and enters the input file via the following:
 ```
@@ -393,11 +390,11 @@ end
 
 `laplacian` - a laplacian profile is used to model the NAC, and is desireable for its cusp-like shape. Typically it overestimates the NAC at the peak and underestimates the NAC in the wings. It is parameterised by the Half Width at Half Maximum (HWHM), $\gamma$, the peak position, $r_0$, and amplitude $N$.  It is programmed as:
 
- <!-- $$f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735778.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N\pi}{4\gamma}\exp\left(-\frac{|r-r_0|}{\gamma}\right),
+\end{align*}
+```
 
 and enters the input file via the following:
 ```
@@ -419,13 +416,11 @@ end
 
 `gaussian` - a gaussian profile is used to model the NAC. It is parameterised by the width, $\gamma$, the peak position, $r_0$, and amplitude $N$. It is programmed as:
 
-<!-- $$f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),$$ -->
-
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728735816.jpg" alt="equation" />
-</p>
-
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{N}{2\gamma}\exp\left(-\ln(2)\left(\frac{r-r_0}{\gamma}\right)^2\right),
+\end{align*}
+```
 and enters the input file via the following:
 ```
 NAC 1 2
@@ -444,36 +439,32 @@ end
 
 `lor_lap` - the geometric average of a lorentzian and laplacian mixing angle (cumulative distribution function) is used to model the NAC ([see here for details](https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp03051a)). It is parameterised by two widths, $\gamma$ & $\delta$, the peak position, $r_0$, and is normalised to unit area. It is programmed as:
 
-<!-- $$f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr}$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751210.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+f(r;\gamma,r_0)=\frac{d\beta^{\rm avg}_{ij}}{dr},
+\end{align*}
+```
 
 where the mixing angle between states $i$ and $j$, $\beta^{\rm avg}_{ij}$, is
 
-<!-- $$\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right)$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751280.jpg" alt="equation" />
-</p>
+```math
+\begin{align*}
+\beta^{\rm avg}_{ij} = \frac{1}{2}\arcsin\left(\sqrt{\sin(2\beta^{\rm lo}_{ij})\sin(2\beta^{\rm la}_{ij})}\right),
+\end{align*}
+```
 
 where the lorentzian and laplacian mixing angles are
 
-<!-- $$\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right)$$
-$$\beta^{\rm la}_{ij}=\begin{cases} 
+```math
+\begin{align*}
+\beta^{\rm lo}_{ij}=\frac{\pi}{4}+\frac{1}{2}\arctan\left(\frac{r-r_0}{\gamma}\right) \\
+\beta^{\rm la}_{ij}=\begin{cases} 
 \frac{\pi}{4}\exp(\frac{r-r_0}{\delta}) & \text{if } r < r_0, \\
 \frac{\pi}{4} & \text{if } r = r_0, \\
 \frac{\pi}{2}-\frac{\pi}{4}\exp(-\frac{r-r_0}{\delta}) & \text{if } r > r_0.
-\end{cases}$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751389.jpg" alt="equation" />
-</p>
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751415.jpg" alt="equation" />
-</p>
+\end{cases}
+\end{align*}
+```
 where the maximal overlap of the lorentzian and laplacian function is ensured when
 
 $$\delta = 1.397\times \gamma$$
@@ -500,19 +491,11 @@ sub-types f1 f2
 ```
 In this case the two functions $f_1$ and $f_2$ are mixed in the following linear combination
 
-<!-- $$f = mf_2 + (1-m)f_1$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751530.jpg" alt="equation" />
-</p>
+$$f = mf_2 + (1-m)f_1$$
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$ and $f_2$ are allowed to be any programmed function, and share the same peak position $r_0$, width $\gamma$, and amplitude $N$. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751599.jpg" alt="equation" />
-</p>
-
-<!-- $$\gamma(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))}$$ -->
+$$\gamma(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))}$$
 
 meaning at the crossing point the width parameter reduces to a reference width $\gamma_0$. $a>0$ will give the function a long tail left of the peak, $a<0$ will give the function a long tail right of the peak, and $a=0$ makes the function symmetric about $r_0$. 
 
@@ -543,18 +526,11 @@ sub-types f1 f2 f3
 ```
 In this case the two functions $f_1$ and $f_2$ are mixed in the following linear combination and perturbation by $f_3$
 
-<!-- $$f(r;r_0,\tilde{\gamma},N) = mf_2(r;r_0,\tilde{\gamma},N)+ (1-m)f_1(r;r_0,\tilde{\gamma},N)+\sum^n_if_3(r;r_{0,i},\gamma_{0,i},N_{0,i})$$ -->
-
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751637.jpg" alt="equation" />
-</p>
+$$f(r;r_0,\tilde{\gamma},N) = mf_2(r;r_0,\tilde{\gamma},N)+ (1-m)f_1(r;r_0,\tilde{\gamma},N)+\sum^n_if_3(r;r_{0,i},\gamma_{0,i},N_{0,i})$$
 
 where $m$ controls the fraction of the final function character contributed by either sub-functions. $f_1$, $f_2$, and $f_3$ are allowed to be any programmed function, and share the same peak position and width. The  `mix` function allows for greater flexibilty by including assymetry into the function profile by the allowing the width parameter to vary sigmoidally as
 
-<!-- $$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))},$$ -->
- <p align="center">
-  <img src="https://www.sciweavers.org/download/Tex2Img_1728751599.jpg" alt="equation" />
-</p>
+$$\tilde{\gamma}(r;a,r_0)=\frac{2\gamma_0}{1+\exp(a(r-r_0))}$$,
 
 meaning at the crossing point the width parameter reduces to a reference width $\gamma_0$. $a>0$ will give the function a long tail left of the peak, $a<0$ will give the function a long tail right of the peak, and $a=0$ makes the function symmetric about $r_0$. 
 
@@ -730,6 +706,62 @@ end
 ```
 This will fit only the width $\gamma$ and the peak position $r_0$ of the lorentzian. `fit` can be placed on any parameter, which will be fitted to ensure smooth diabatic potentials.
 
+Parameter bounds can also be included for the optimization by listing them after the `fit` key as so
+```
+parameter value fit Left-Bound Right-Bound
+```
+Using the previous NAC example, if we want to fit the NAC centroid position between 1 and 2 Angstroms, we'd have the following
+```
+NAC 1 2
+name <1|d/dr|2>
+spin 0.0 0.0
+sigma 0.0 0.0
+lambda 0 0
+type gaussian
+factor 1.0
+values 
+    gamma 0.01466346
+    r0    1.22717420 fit 1 2
+    N     1.00000000
+end
+```
+### Diabatising an N-State System
+If one is trying to diabatise an $N$-state system, a numerical appraoch to determine the adiabatic-to-diabatic transformation (AtDT) is required. This code uses the typical evolution-type solver which is based on the following exponential line integral propogator
+```math
+\begin{align*}
+\mathbf{U}(r_{i+1}) = \exp{\int^{r_{i+1}}}_{r_i}\mathbf{W}^{(1)} dr} \mathbf{U}(r_i)
+\end{align*}
+```
+where $i$ is the grid point index, $\mathbf{W}^{(1)}$ is the NAC matrix, $\mathbf{U}$ is the AtDT, and a boundary value for the AtDT is thus required (see [method](#the-method-block) for more details). With a given set of NACs, it is not necessarily guaranteed that the resulting diabatisation will yield a set of physically-meaningful diabatic properties since no molecular properties enter the evolution above. As a consequence, the topology of the resulting diabatic curves and the asymptotic regions may be unphysical/non-desireable. One can attempt an evolution from both ends of the nuclear grid (unified atom limit or seperated atom limit), but these two solutions will not necessarily coincide, albeit exactly equivalent. However, a specific sert of NACs is identified to connect these two solutions such that the diabatic representation is smooth (detailed methodolgy is in a paper currently in preparation). 
+
+The `evolution` diabatization scheme attempts to compute a **regularizing correction** to the NACs to simultaneously fullfil two pragmatic aims: (1) yield a smooth and physically meanignful diabatic representation; (2) compute a diabatic representation which is exactly equivalent to the defined adiabatic representation defined by the user. This method does this by optimization of a switching function matrix which acts between both a forward and back evolved AtDT solutions
+```math
+\begin{align*}
+\tilde{\mathbf{U}}= \exp{\mathbf{F}\circ \mathbf{\beta}_b + (\mathbf{J}_N - \mathbf{F})\circ \mathbf{\beta}_f}
+\end{align*}
+```
+where $\mathbf{\beta}=ln(\mathbf{U})$ is the generator matrix, subscript 'b'/'f' refers to backward and forward ebvolved AtDT solutions, $\mathbf{J}_N$ is the all-ones matrix of dimension $N$, and $\mathbf{F}$ is a matrix of $N(N-1)/2$ unique switching functions $f_{ij} \in (0,1)$ given by
+```math
+\begin{align*}
+f_{ij} = 
+\end{align*}
+```
+
+
+Specifying this method alone will call a subroutine which will attempt to generate a suitable set of initial parameter values for the generator switching functions prior to their optimization. This is 
+```
+switch 1 2
+values 
+    g0               1.730980021425479000
+    r0               4.629814041244844500
+    p                2
+    beta2            0.100000000000000000
+    beta4            0.020000000000000000
+    B0               0.881782594855986300
+    B1               0.018628143914272883
+    B2               0.000000000000000000
+end
+```
 
 
 <!-- ROADMAP -->
