@@ -17,7 +17,7 @@ end
 
 save
 	as duo
-	jrot 0
+	jrot 0.5
 	vmax 1000
 	nroots 250
 end
@@ -28,6 +28,7 @@ name 1^2Sigma
 symmetry +
 lambda 0
 mult 2
+units angstrom cm-1
 type  grid
 values
 	0.5	229361.394782042
@@ -2041,6 +2042,7 @@ symmetry +
 lambda 0
 mult 2
 type  grid
+units angstrom cm-1
 values
 	0.5	196613.02503324285
 	0.50325	194533.96662350706
@@ -4053,6 +4055,7 @@ symmetry +
 lambda 0
 mult 2
 type  grid
+units angstrom cm-1
 values
 	0.5	210864.75142099606
 	0.50325	208599.01662823395
@@ -6065,6 +6068,7 @@ symmetry +
 lambda 0
 mult 2
 type  grid
+units angstrom cm-1
 values
 	0.5	162889.07117780106
 	0.50325	162406.3054076996

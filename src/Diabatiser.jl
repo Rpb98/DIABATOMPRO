@@ -1737,12 +1737,14 @@ function N_state_diabatisation(block)
             if Calculation["method"].r_boundary_condition != false
                 #
                 ## perform parallelisation on evolutions
+                ENV["JULIA_NUM_THREADS"] = "2"
                 forward_evo  = Threads.@spawn Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
                 backward_evo = Threads.@spawn Backward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].r_boundary_condition)
                 #
                 ## Wait for both processes to complete and fetch results
                 Uf, dUf, UdUf = fetch(forward_evo)
                 Ub, dUb, UdUb = fetch(backward_evo)
+                ENV["JULIA_NUM_THREADS"] = "1"
             else
                 #
                 ## perform forward evolution
@@ -1977,6 +1979,18 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
             calc_symmetry = "C2v"
         elseif atom1!=atom2
             calc_symmetry = "Cs(M)"
+        end
+        #
+        multiplicity = Hamiltonian[("poten",1)].mult
+        #
+        if iseven(Int(multiplicity))
+            if isinteger(parse(Float64,jrot))
+                println("Multiplicity of the electronic states is not compatible with an integer j. If multiplicity is even then j is a half integer!")
+            end
+        else
+            if isinteger(parse(Float64,jrot)) == false
+                println("Multiplicity of the electronic states is not compatible with a half-integer j. If multiplicity is off then j is an integer!")
+            end
         end
         #
         ## duo input setup
