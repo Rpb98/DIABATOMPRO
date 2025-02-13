@@ -977,7 +977,7 @@ function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECT
 
 end
 #
-function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Ub::AbstractArray{Float64}, Va::AbstractArray{Float64}, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
+function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Ub::AbstractArray{Float64}, Va::Array{Float64, 3}, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -1238,7 +1238,14 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
         U  = real(exp.(K))
         #
         ## compute smoothness of the diabatic curves induced by U (ignore adiabatic smoothness/derivatives)
-        smoothness =  SmoothnessByU(rgrid,U,Va,dim)
+        smoothness = 0.0
+        if length(Va) == 2
+            for property in Va
+                smoothness +=  SmoothnessByU(rgrid,U,property,dim)
+            end
+        else
+            smoothness = SmoothnessByU(rgrid,U,Va,dim)
+        end
         #
         return (1 + penalty)*smoothness
     end
@@ -1309,13 +1316,17 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
         #
         return g0, r0, r0_bounds, g_guess
     end
+    #
     ################## INITIALISATION OF ROUTINE PARAMETERS ####################
-    Nel = Int(dim*(dim-1)/2)
     #
     ## convert matrices to vector format
     Uf = collect(eachslice(Uf, dims=1)) #[Uf[i,:,:] for i=1:lastindex(Uf[:,1,1])]
     Ub = collect(eachslice(Ub, dims=1)) #[Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
-    Va = collect(eachslice(Va, dims=1)) #[Va[i,:,:] for i=1:lastindex(Va[:,1,1])]
+    if length(Va) == 2
+        Va = [collect(eachslice(property, dims=1)) for property in Va]
+    else
+        Va = collect(eachslice(Va, dims=1)) #[Va[i,:,:] for i=1:lastindex(Va[:,1,1])]
+    end
     #
     ## compute generators for each solution & their difference matrix
     Kf = real(log.(Uf))
@@ -1531,8 +1542,6 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     ## compute the corresponding unitary matrix
     U  = real(exp.(K))
     #
-    Vd = adjoint.(U) .* Va .* U
-    #
     dU = FiniteDiff_MatDerivative(rgrid,U,dim,1) # computes derivative of matrix
     UdU = map(i -> U[i]*dU[i]',collect(1:size(rgrid)[1]))
     #
@@ -1586,7 +1595,7 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
             fig.delaxes(axs[i,i])
         end
     end
-    return U, dU, UdU, K, Vd, W_regularised
+    return U, dU, UdU, K, W_regularised
 end
 #
 function Inverse_Transform_Sampling_Grid(Npoints::Int64)::Vector{Float64}
@@ -1623,6 +1632,37 @@ function Inverse_Transform_Sampling_Grid(Npoints::Int64)::Vector{Float64}
     ITS_grid = cdf_inverted_spline(LinRange(0,1,Npoints))
     #
     return ITS_grid
+end
+#
+function initialise_normalise(dim::Int64, renumbered_states::Dict{Int64,Int64}, adi_prop::AbstractArray{Float64}, type::String)::AbstractArray{Float64}
+    #
+    ## initialse the adiabatic property matrix
+    Pa = zeros(Float64,length(r),dim,dim)
+    #
+    for i in Calculation["method"].states
+        for j in Calculation["method"].states
+            if check_symmetry_and_states(Int(i),Int(j))
+                row, col = renumbered_states[i], renumbered_states[j]
+                #
+                Pa[:,row,col] = adi_prop[:,i,j]
+            end
+        end
+    end 
+    #
+    ## now normalise the property to the interval [0,1]
+    min = minimum(adi_prop)
+    #
+    if lowercase(type) == "potential"; 
+        max = maximum(Pa[end,:,:])
+    else
+        max = maximum(Pa)
+    end
+    #
+    range = max - min
+    #
+    Pa_scaled = (Pa .- min) ./ range
+    #
+    return Pa_scaled
 end
 #
 function N_state_diabatisation(block)
@@ -1670,7 +1710,7 @@ function N_state_diabatisation(block)
     #
     ## now perform evolution
     if  occursin("forward",lowercase(Calculation["method"].diabatisation))
-        U, dU, UdU = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
+        U, dU, UdU_ = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
         #
         U  = SplineMat(rsolve,  U, r)
         dU = SplineMat(rsolve, dU, r)
@@ -1686,7 +1726,7 @@ function N_state_diabatisation(block)
             r_boundary_condition = Calculation["method"].r_boundary_condition
         end
         #
-        U, dU, UdU = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
+        U, dU, UdU_ = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
         #
         U  = SplineMat(rsolve,  U, r)
         dU = SplineMat(rsolve, dU, r)
@@ -1715,28 +1755,22 @@ function N_state_diabatisation(block)
                 Ub, dUb, UdUb = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
             end
             #
-            ## determine the adiabatic property to regualrise to
+            ## determine the adiabatic property to regualrise to; initialise the object(s) and normalise them to the interval [0,1]
             if Calculation["method"].regularisation == false
-                adi_prop = Objects["potential"]
+                Pa = initialise_normalise(dim, renumbered_states, Objects["potential"], "potential")
+            elseif occursin("_",Calculation["method"].regularisation)
+                obj_1, obj_2 = split(Calculation["method"].regularisation,"_")
+                #
+                adi_prop_1 = initialise_normalise(dim, renumbered_states, Objects[lowercase(obj_1)], lowercase(obj_1))
+                adi_prop_2 = initialise_normalise(dim, renumbered_states, Objects[lowercase(obj_2)], lowercase(obj_2))
+                #
+                Pa = [adi_prop_1,adi_prop_2]
             else
-                adi_prop = Objects[Calculation["method"].regularisation]
-            end
-            #
-            ## initialse the adiabatic property matrix
-            Pa = zeros(Float64,length(r),dim,dim)
-            #
-            for i in Calculation["method"].states
-                for j in Calculation["method"].states
-                    if check_symmetry_and_states(Int(i),Int(j))
-                        row, col = renumbered_states[i], renumbered_states[j]
-                        #
-                        Pa[:,row,col] = adi_prop[:,i,j]
-                    end
-                end
+                Pa = initialise_normalise(dim, renumbered_states,  Objects[lowercase(Calculation["method"].regularisation)], lowercase(Calculation["method"].regularisation))
             end
             #
             ## perform regularisation procedure
-            U_, dU_, UdU_, K, Vd, W_regularised = regularise(r, 
+            U_, dU_, UdU_, K, W_regularised = regularise(r, 
                                                           SplineMat(rsolve, Uf, r), 
                                                           SplineMat(rsolve, Ub, r), 
                                                           Pa, 
@@ -1744,18 +1778,31 @@ function N_state_diabatisation(block)
                                                           [r[1], r[end]], 
                                                           DENSE_GRID_OBJECTS = [rsolve, Uf, Ub])
             #
-            UdU = W_regularised
+            UdU = UdU_ #W_regularised
             #
-            U = zeros(length(r),dim,dim)
-            dU = zeros(length(r),dim,dim)
+            reduced_dim = size(U_[1])[1]
             #
-            for i in Calculation["method"].states
-                for j in Calculation["method"].states
-                    U[:,i,j] = [u[renumbered_states[i],renumbered_states[j]] for u in U_]
+            U    = zeros(length(r),reduced_dim,reduced_dim)
+            dU   = zeros(length(r),reduced_dim,reduced_dim)
+            #
+            for i=1:reduced_dim #Calculation["method"].states
+                for j=1:reduced_dim # Calculation["method"].states
+                    U[:,i,j] = [u[i,j] for u in U_]
                     #
-                    dU[:,i,j] = [x[renumbered_states[i],renumbered_states[j]] for x in dU_]
+                    dU[:,i,j] = [x[i,j] for x in dU_]
                 end
             end
+    end
+    #
+    reduced_dim = size(U[1,:,:])[1]
+    #
+    UdU  = zeros(length(r),reduced_dim,reduced_dim)
+    #
+    for i=1:reduced_dim 
+        for j=1:reduced_dim
+            #
+            UdU[:,i,j] = [x[i,j] for x in UdU_]
+        end
     end
     #
     return U, dU, UdU, rsolve, renumbered_states
@@ -1781,7 +1828,8 @@ function run_diabatiser(diabMethod)
         #
         dU = map(i -> - UdU[i,:,:] * U[i,:,:]', collect(1:lastindex(r)))
     elseif  occursin("evolution",diabMethod)
-        U_, dU, UdU_, rsolve, renumbered_states = N_state_diabatisation(Calculation["method"].states)
+        U_, dU_, UdU_, rsolve, renumbered_states = N_state_diabatisation(Calculation["method"].states)
+        # println(renumbered_states,"  ",UdU_[1,:,:]," dim=",dim)
         #
         ## U_, dU_, has elements of U_[:,i,j], UdU_ has elements in list [x[i,j] for x in UdU_]
         #
@@ -1791,20 +1839,40 @@ function run_diabatiser(diabMethod)
             U[:,i,i] .= 1.0
         end
         #
-        UdU = zeros(length(rsolve),dim,dim)
+        dU = zeros(Float64,length(r),dim,dim)
         #
         for i in Calculation["method"].states
             for j in Calculation["method"].states
-                U[:,i,j]   = U_[:,renumbered_states[i],renumbered_states[j]] # for u in U_]
+                U[:,i,j]  =  U_[:,renumbered_states[i],renumbered_states[j]] # for u in U_]
+                dU[:,i,j] = dU_[:,renumbered_states[i],renumbered_states[j]] # for u in U_]
                 #
-                if i!=j
-                    UdU[:,i,j] = [w[renumbered_states[i],renumbered_states[j]] for w in UdU_]
-                end
+                # if (i!=j)&(i<j)
+                #     println(i," -> ",renumbered_states[i]," ",j," -> ",renumbered_states[j])
+                #     UdU[:,i,j] .=  copy(UdU_[:,renumbered_states[i],renumbered_states[j]])
+                #     UdU[:,j,i] .= -copy(UdU_[:,renumbered_states[i],renumbered_states[j]])
+                # end
             end
         end
         #
+        UdU = map(i -> U[i,:,:] * dU[i,:,:]', collect(1:lastindex(r)))
+        #
+        #
+        # K_test = map(i -> -dU[i,:,:]'*dU[i,:,:], collect(1:size(r)[1])) 
+        # #
+        # ## residual KE
+        # Ke = map(i -> -(K_test[i] + U[i,:,:]'*UdU[i]*UdU[i]*U[i,:,:] - (dU[i,:,:]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i,:,:])), collect(1:size(r)[1])) 
+        # Ke_norm = map(i -> frobeniusNorm(i*2.407704078236624), Ke)
+    
+        # plt.figure()
+        # plt.plot(r,Ke_norm) 
+        # plt.title("2")
+        
+        # println("CATS",length(UdU)," ",length(r))
+        #
         ## spline UdU onto the PEC grid
-        UdU = SplineMat(rsolve, UdU, r)
+        if length(UdU[:,1,1]) == length(rsolve)
+            UdU = SplineMat(rsolve, UdU, r)
+        end
         # #
         # ## create new regularised NAC object
         # Objects["regularised_nac"] = UdU
@@ -1824,73 +1892,81 @@ function run_diabatiser(diabMethod)
     Objects["regularised_nac"] = UdU
     #
     ## compute K matrix (<di/dr|dj/dr>)
-    K_Matrix_ = map(i -> -UdU[i,:,:] * UdU[i,:,:], collect(1:lastindex(r)))
-    K_Matrix = zeros(length(r),dim,dim)
-    for i=1:dim
-        for j=1:dim
-            K_Matrix[:,i,j] = [k[i,j] for k in K_Matrix_]
-        end
-    end
+    K_Matrix = map(i -> - UdU[i] * UdU[i], collect(1:lastindex(r)))
+    # K_Matrix = zeros(length(r),dim,dim)
+    # for i=1:dim
+    #     for j=1:dim
+    #         K_Matrix[:,i,j] = [k[i,j] for k in K_Matrix_]
+    #     end
+    # end
     Objects["K_matrix"] = K_Matrix
     #
-    ## diabatic basis
-    psi_d = zeros(Float64,dim)
-    diabatic_basis = []
-    for i=1:dim
-        psi_d[i] = 1.0
-        #
-        push!(diabatic_basis, map(AtDT -> AtDT * psi_d, eachslice(U, dims=1)))
-        #
-        psi_d[i] = 0.0
-    end
+    ## compute the residual kinetic energy
+    Ke = map(i -> -(-dU[i,:,:]'*dU[i,:,:] - U[i,:,:]'*K_Matrix[i]*U[i,:,:] - (dU[i,:,:]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i,:,:])), collect(1:size(r)[1])) 
+    #
+    ## compute the kinetic energy factor -ħ^2/2µ
+    atom1, atom2 = Calculation["method"].atoms
+    kinetic_factor =  KE_factor(atom1, atom2)
+    residual_kinetic_energy = map(i -> frobeniusNorm(i*kinetic_factor), Ke)
+    #
+    ## diabatic basis (NO LONGER NEEDED... SIMPLY TRANSFORM MATRICES)
+    # psi_d = zeros(Float64,dim)
+    # diabatic_basis = []
+    # for i=1:dim
+    #     psi_d[i] = 1.0
+    #     #
+    #     push!(diabatic_basis, map(AtDT -> AtDT * psi_d, eachslice(U, dims=1)))
+    #     #
+    #     psi_d[i] = 0.0
+    # end
     #
     ## diabatic properties
     input_properties = unique([k[1] for k in keys(Hamiltonian)])
     #
     Diabatic_Objects = Dict()
     for p in input_properties
-    if p != "NAC"
-        #
-        if p == "poten"
+        if p != "NAC"
             #
-            Adiabatic_PotMat = Objects["potential"]
-            #
-            Diabatic_PotMat = map(i -> U[i,:,:]' * Adiabatic_PotMat[i,:,:] * U[i,:,:], collect(1:lastindex(r)))
-            #
-            ##
-            Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
-            #
-            for i=1:dim
-                for j=1:dim
-                    Diabatic_PropMat[:,i,j] = [Vd[i,j] for Vd in Diabatic_PotMat]
+            if p == "poten"
+                #
+                Adiabatic_PotMat = Objects["potential"]
+                #
+                Diabatic_PotMat = map(i -> U[i,:,:]' * Adiabatic_PotMat[i,:,:] * U[i,:,:], collect(1:lastindex(r)))
+                #
+                ##
+                Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
+                #
+                for i=1:dim
+                    for j=1:dim
+                        Diabatic_PropMat[:,i,j] .= [Vd[i,j] for Vd in Diabatic_PotMat]
+                    end
                 end
-            end
-            #
-            Diabatic_Objects["potential"] = Diabatic_PropMat
-        else
-            Adiabatic_PropMat = Objects[lowercase(p)]
-            #
-            Diabatic_PropMat_vec = map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r)))  #zeros(Float64, length(r), dim, dim)
-            Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
-            #
-            for i=1:dim
-                for j=1:dim
-                    # Pd_ij =  map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r))) #Diabatic_Property_from_wavefunctions(diabatic_basis[i], diabatic_basis[j], Adiabatic_PropMat)
-                    #
-                    Diabatic_PropMat[:,i,j] = [Pd[i,j] for Pd in Diabatic_PropMat_vec]
+                #
+                Diabatic_Objects["potential"] = Diabatic_PropMat
+            else
+                Adiabatic_PropMat = Objects[lowercase(p)]
+                #
+                Diabatic_PropMat_vec = map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r)))  #zeros(Float64, length(r), dim, dim)
+                Diabatic_PropMat = zeros(Float64, length(r), dim, dim)
+                #
+                for i=1:dim
+                    for j=1:dim
+                        # Pd_ij =  map(i -> U[i,:,:]' * Adiabatic_PropMat[i,:,:] * U[i,:,:], collect(1:lastindex(r))) #Diabatic_Property_from_wavefunctions(diabatic_basis[i], diabatic_basis[j], Adiabatic_PropMat)
+                        #
+                        Diabatic_PropMat[:,i,j] .= [Pd[i,j] for Pd in Diabatic_PropMat_vec]
+                    end
                 end
+                #
+                Diabatic_Objects[lowercase(p)] = Diabatic_PropMat
             end
-            #
-            Diabatic_Objects[lowercase(p)] = Diabatic_PropMat
         end
-    end
     end
     #
     property_ordering = ["poten","nac","spin-orbit","lx","dipole"]
     #
     sorted_properties = [p for p in property_ordering if lowercase(p) in lowercase.(input_properties)]
     #
-    return U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, sorted_properties
+    return U, dU, UdU, K_Matrix, Diabatic_Objects, sorted_properties, residual_kinetic_energy
 end
 #
 function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_properties, fname; special_name = "", folder_path = false, intensity_flag = false, thresh_intes  = 1e-40, thresh_line   = 1e-40, thresh_bound  = 1e-4, thresh_dipole = 1e-8)
@@ -2020,7 +2096,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         for idx=1:size(r)[1]
             x = r[idx]
-            y = NAC_Matrix[idx, i, j]
+            y = NAC_Matrix[idx][i, j]
             @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
@@ -2050,7 +2126,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         for idx=1:size(r)[1]
             x = r[idx]
-            y = K_Matrix[idx, i, j]
+            y = K_Matrix[idx][i, j]
             @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
@@ -2376,6 +2452,12 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                 else
                                     write_SOC(io,r, i, j, Diabatic_Objects["spin-orbit"])
                                 end
+                            elseif ("spin-orbit",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    write_SOC(io,r, j, i, Objects["spin-orbit"])
+                                else
+                                    write_SOC(io,r, j, i, Diabatic_Objects["spin-orbit"])
+                                end
                             end
                         end
                     end
@@ -2389,6 +2471,12 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                 else
                                     write_dipole(io,r, i, j, Diabatic_Objects["dipole"])
                                 end
+                            elseif ("dipole",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    write_dipole(io,r, j, i, Objects["dipole"])
+                                else
+                                    write_dipole(io,r, j, i, Diabatic_Objects["dipole"])
+                                end
                             end
                         end
                     end
@@ -2401,6 +2489,12 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                     write_EAM(io,r, i, j, Objects["lx"])
                                 else
                                     write_EAM(io,r, i, j, Diabatic_Objects["lx"])
+                                end
+                            elseif ("Lx",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    write_EAM(io,r, j, i, Objects["lx"])
+                                else
+                                    write_EAM(io,r, j, i, Diabatic_Objects["lx"])
                                 end
                             end
                         end
