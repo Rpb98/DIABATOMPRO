@@ -12,7 +12,7 @@ include("input_reader.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATISER ROUTINES ~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Diabatiser.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATOMPRO FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-export Diabatise
+export Diabatise, fit_abinitio, Forward_Evolution, Backward_Evolution
 #
 function Diabatise(fname; save_flag = false, special_name = "")
     #

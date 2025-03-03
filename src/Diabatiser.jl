@@ -183,7 +183,7 @@ function compute_mixing_angle(r, f, key, p)
         else
                 X, NACij = ComputeProperty_viaParameters(r, f, NonAdiabaticCoupling[key].Lval, p, "NAC", NonAdiabaticCoupling[key].units, NonAdiabaticCoupling[key].sub_type,  NonAdiabaticCoupling[key].factor)
                 #
-                mixing_angle = cumtrapz(X,NACij) #map(i->trapz(X[1:i],NACij[1:i]), collect(1:size(r)[1]))
+                mixing_angle = cumtrapz(collect(X),NACij) #map(i->trapz(X[1:i],NACij[1:i]), collect(1:size(r)[1]))
         end
         #
         return mixing_angle
@@ -446,7 +446,7 @@ function EvolutionOperator(rf::Float64, ri::Float64, Wf::Matrix{Float64}, Wi::Ma
     return evoMat
 end
 #
-@everywhere function Forward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
+function Forward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
     #
     ## compute the identity matrix
     Identity = zeros(Float64,dim,dim)
@@ -477,7 +477,7 @@ end
     return U, dU, UdU
 end
 #
-@everywhere function Backward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
+function Backward_Evolution(rgrid::Vector{Float64}, W::AbstractArray{Float64}, dim::Int64, BoundaryCondition::Matrix{Float64})::Tuple{AbstractArray{Float64},AbstractArray{Float64},Vector{Matrix{Float64}}}
     #
     ## compute the identity matrix
     Identity = zeros(Float64,dim,dim)
@@ -977,7 +977,7 @@ function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECT
 
 end
 #
-function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Ub::AbstractArray{Float64}, Va::Array{Float64, 3}, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
+function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Va, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -1321,7 +1321,16 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     #
     ## convert matrices to vector format
     Uf = collect(eachslice(Uf, dims=1)) #[Uf[i,:,:] for i=1:lastindex(Uf[:,1,1])]
-    Ub = collect(eachslice(Ub, dims=1)) #[Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
+    #
+    ## now compute backward evolution from the linearity condition: Ub = Uf * Uf[end]' * boundary_condition           
+    if Calculation["method"].r_boundary_condition == false
+        r_boundary_condition = find_closest_permutation(Uf[end,:,:], dim)
+    else
+        r_boundary_condition = Calculation["method"].r_boundary_condition
+    end
+    #
+    Ub = map(x -> x * Uf[end]' * r_boundary_condition, Uf)
+    # Ub = collect(eachslice(Ub, dims=1)) #[Ub[i,:,:] for i=1:lastindex(Ub[:,1,1])]
     if length(Va) == 2
         Va = [collect(eachslice(property, dims=1)) for property in Va]
     else
@@ -1500,9 +1509,10 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     ## extract the AtDTs on the solution grid
     rsolve = DENSE_GRID_OBJECTS[1]
     Uf_dense_grid = DENSE_GRID_OBJECTS[2]
-    Ub_dense_grid = DENSE_GRID_OBJECTS[3]
+    # Ub_dense_grid = DENSE_GRID_OBJECTS[3]
     Uf_dense_grid = collect(eachslice(Uf_dense_grid,dims=1)) #[ Uf_dense_grid[i,:,:] for i=1:lastindex(Uf_dense_grid[:,1,1])]
-    Ub_dense_grid = collect(eachslice(Ub_dense_grid,dims=1)) #[ Ub_dense_grid[i,:,:] for i=1:lastindex(Ub_dense_grid[:,1,1])]
+    # Ub_dense_grid = collect(eachslice(Ub_dense_grid,dims=1)) #[ Ub_dense_grid[i,:,:] for i=1:lastindex(Ub_dense_grid[:,1,1])]
+    Ub_dense_grid = map(x -> x .* (Uf_dense_grid[end]' * r_boundary_condition), Uf_dense_grid)
     #
     ## compute the generator matrices on the solution grid
     Kf_dense_grid = real(log.(Uf_dense_grid))
@@ -1714,6 +1724,19 @@ function N_state_diabatisation(block)
         #
         U  = SplineMat(rsolve,  U, r)
         dU = SplineMat(rsolve, dU, r)
+        #
+        UdU_ = U .* FiniteDiff_MatDerivative(collect(r),adjoint.(U),dim, 1)
+        #
+        reduced_dim = size(U[1,:,:])[1]
+        #
+        UdU  = zeros(length(r),reduced_dim,reduced_dim)
+        #
+        for i=1:reduced_dim 
+            for j=1:reduced_dim
+                #
+                UdU[:,i,j] = UdU_[:,i,j]
+            end
+        end
     #
     elseif occursin("backward",lowercase(Calculation["method"].diabatisation))
         #
@@ -1730,32 +1753,27 @@ function N_state_diabatisation(block)
         #
         U  = SplineMat(rsolve,  U, r)
         dU = SplineMat(rsolve, dU, r)
+        #
+        UdU_ = U .* FiniteDiff_MatDerivative(collect(r),adjoint.(U),dim, 1)
+        #
+        reduced_dim = size(U[1,:,:])[1]
+        #
+        UdU  = zeros(length(r),reduced_dim,reduced_dim)
+        #
+        for i=1:reduced_dim 
+            for j=1:reduced_dim
+                #
+                UdU[:,i,j] = UdU_[:,i,j]
+            end
+        end
     #
     elseif (Calculation["method"].regularisation != false)&(lowercase(Calculation["method"].diabatisation) == "evolution")
             #
-            ## check to see if right boundary comdition is given
-            if Calculation["method"].r_boundary_condition != false
-                #
-                ## perform parallelisation on evolutions
-                ENV["JULIA_NUM_THREADS"] = "2"
-                forward_evo  = Threads.@spawn Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
-                backward_evo = Threads.@spawn Backward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].r_boundary_condition)
-                #
-                ## Wait for both processes to complete and fetch results
-                Uf, dUf, UdUf = fetch(forward_evo)
-                Ub, dUb, UdUb = fetch(backward_evo)
-                ENV["JULIA_NUM_THREADS"] = "1"
-            else
-                #
-                ## perform forward evolution
-                Uf, dUf, UdUf = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
-                #
-                ## determine the right boundary condition
-                r_boundary_condition = find_closest_permutation(Uf[end,:,:], dim)
-                #
-                ## perform backward evolution
-                Ub, dUb, UdUb = Backward_Evolution(rsolve, evoNACMat, dim, r_boundary_condition)
-            end
+            ## perform the forward evolution
+            Uf, dUf, UdUf = Forward_Evolution(rsolve, evoNACMat, dim, Calculation["method"].l_boundary_condition)
+            #
+            ## backward solution can be computed from the forward via: Ub = Uf * Uf[end] * r_boundary_condition
+            ## which will be done in the regularise routine.
             #
             ## determine the adiabatic property to regualrise to; initialise the object(s) and normalise them to the interval [0,1]
             if Calculation["method"].regularisation == false
@@ -1773,38 +1791,29 @@ function N_state_diabatisation(block)
             #
             ## perform regularisation procedure
             U_, dU_, UdU_, K, W_regularised = regularise(r, 
-                                                          SplineMat(rsolve, Uf, r), 
-                                                          SplineMat(rsolve, Ub, r), 
+                                                          SplineMat(rsolve, Uf, r),  
                                                           Pa, 
                                                           dim, 
                                                           [r[1], r[end]], 
-                                                          DENSE_GRID_OBJECTS = [rsolve, Uf, Ub])
+                                                          DENSE_GRID_OBJECTS = [rsolve, Uf])
             #
-            UdU = UdU_ #W_regularised
+            # UdU = UdU_ #W_regularised
             #
             reduced_dim = size(U_[1])[1]
             #
             U    = zeros(length(r),reduced_dim,reduced_dim)
             dU   = zeros(length(r),reduced_dim,reduced_dim)
+            UdU  = zeros(length(r),reduced_dim,reduced_dim)
             #
             for i=1:reduced_dim #Calculation["method"].states
                 for j=1:reduced_dim # Calculation["method"].states
                     U[:,i,j] = [u[i,j] for u in U_]
                     #
                     dU[:,i,j] = [x[i,j] for x in dU_]
+                    #
+                    UdU[:,i,j] = [x[i,j] for x in UdU_]
                 end
             end
-    end
-    #
-    reduced_dim = size(U[1,:,:])[1]
-    #
-    UdU  = zeros(length(r),reduced_dim,reduced_dim)
-    #
-    for i=1:reduced_dim 
-        for j=1:reduced_dim
-            #
-            UdU[:,i,j] = [x[i,j] for x in UdU_]
-        end
     end
     #
     return U, dU, UdU, rsolve, renumbered_states
@@ -1829,9 +1838,11 @@ function run_diabatiser(diabMethod)
         UdU = Objects["nac"]
         #
         dU = map(i -> - UdU[i,:,:] * U[i,:,:]', collect(1:lastindex(r)))
+        #
+        ## compute K matrix (<di/dr|dj/dr>)
+        K_Matrix = map(i -> - UdU[i,:,:] * UdU[i,:,:], collect(1:lastindex(r)))
     elseif  occursin("evolution",diabMethod)
         U_, dU_, UdU_, rsolve, renumbered_states = N_state_diabatisation(Calculation["method"].states)
-        # println(renumbered_states,"  ",UdU_[1,:,:]," dim=",dim)
         #
         ## U_, dU_, has elements of U_[:,i,j], UdU_ has elements in list [x[i,j] for x in UdU_]
         #
@@ -1847,54 +1858,23 @@ function run_diabatiser(diabMethod)
             for j in Calculation["method"].states
                 U[:,i,j]  =  U_[:,renumbered_states[i],renumbered_states[j]] # for u in U_]
                 dU[:,i,j] = dU_[:,renumbered_states[i],renumbered_states[j]] # for u in U_]
-                #
-                # if (i!=j)&(i<j)
-                #     println(i," -> ",renumbered_states[i]," ",j," -> ",renumbered_states[j])
-                #     UdU[:,i,j] .=  copy(UdU_[:,renumbered_states[i],renumbered_states[j]])
-                #     UdU[:,j,i] .= -copy(UdU_[:,renumbered_states[i],renumbered_states[j]])
-                # end
             end
         end
         #
         UdU = map(i -> U[i,:,:] * dU[i,:,:]', collect(1:lastindex(r)))
         #
-        #
-        # K_test = map(i -> -dU[i,:,:]'*dU[i,:,:], collect(1:size(r)[1])) 
-        # #
-        # ## residual KE
-        # Ke = map(i -> -(K_test[i] + U[i,:,:]'*UdU[i]*UdU[i]*U[i,:,:] - (dU[i,:,:]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i,:,:])), collect(1:size(r)[1])) 
-        # Ke_norm = map(i -> frobeniusNorm(i*2.407704078236624), Ke)
-    
-        # plt.figure()
-        # plt.plot(r,Ke_norm) 
-        # plt.title("2")
-        
-        # println("CATS",length(UdU)," ",length(r))
-        #
         ## spline UdU onto the PEC grid
         if length(UdU[:,1,1]) == length(rsolve)
             UdU = SplineMat(rsolve, UdU, r)
         end
-        # #
-        # ## create new regularised NAC object
-        # Objects["regularised_nac"] = UdU
-        # #
-        # ## compute K matrix (<di/dr|dj/dr>)
-        # K_Matrix_ = map(i -> -UdU[i,:,:] * UdU[i,:,:], collect(1:lastindex(r)))
-        # K_Matrix = zeros(length(r),dim,dim)
-        # for i=1:dim
-        #     for j=1:dim
-        #         K_Matrix[:,i,j] = [k[i,j] for k in K_Matrix_]
-        #     end
-        # end
-        # Objects["K_matrix"] = K_Matrix
+        #
+        ## compute K matrix (<di/dr|dj/dr>)
+        K_Matrix = map(i -> - UdU[i] * UdU[i], collect(1:lastindex(r)))
     end
     #
     ## create new regularised NAC object
     Objects["regularised_nac"] = UdU
     #
-    ## compute K matrix (<di/dr|dj/dr>)
-    K_Matrix = map(i -> - UdU[i] * UdU[i], collect(1:lastindex(r)))
     # K_Matrix = zeros(length(r),dim,dim)
     # for i=1:dim
     #     for j=1:dim
@@ -1904,7 +1884,11 @@ function run_diabatiser(diabMethod)
     Objects["K_matrix"] = K_Matrix
     #
     ## compute the residual kinetic energy
-    Ke = map(i -> -(-dU[i,:,:]'*dU[i,:,:] - U[i,:,:]'*K_Matrix[i]*U[i,:,:] - (dU[i,:,:]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i,:,:])), collect(1:size(r)[1])) 
+    if dU isa Array{Float64, 3}
+        Ke = map(i -> -(-dU[i,:,:]'*dU[i,:,:] - U[i,:,:]'*K_Matrix[i]*U[i,:,:] - (dU[i,:,:]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i,:,:])), collect(1:size(r)[1])) 
+    else
+        Ke = map(i -> -(-dU[i]'*dU[i] - U[i,:,:]'*K_Matrix[i]*U[i,:,:] - (dU[i]'*UdU[i]*U[i,:,:] - U[i,:,:]'*UdU[i]*dU[i])), collect(1:size(r)[1])) 
+    end
     #
     ## compute the kinetic energy factor -ħ^2/2µ
     atom1, atom2 = Calculation["method"].atoms
@@ -2110,7 +2094,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         for idx=1:size(r)[1]
             x = r[idx]
-            y = NAC_Matrix[idx][i, j]
+            if NAC_Matrix isa Array{Float64, 3}
+                y = NAC_Matrix[idx, i, j]
+            else
+                y = NAC_Matrix[idx][i, j]
+            end
             @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
@@ -2140,7 +2128,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         for idx=1:size(r)[1]
             x = r[idx]
-            y = K_Matrix[idx][i, j]
+            if K_Matrix isa Array{Float64,3}
+                y = K_Matrix[idx, i, j]
+            else
+                y = K_Matrix[idx][i, j]
+            end
             @printf(io, "\t %.16f \t %.16f \n", x, y)
         end
         #
@@ -2419,11 +2411,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         else
                             write_PEC(io,r, i, Diabatic_Objects["potential"])
                             #
-                            for j=i+1:dim
-                                if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                                    write_DC(io,r, i, j, Diabatic_Objects["potential"])
-                                end
-                            end
+                            # for j=i+1:dim
+                            #     if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+                            #         write_DC(io,r, i, j, Diabatic_Objects["potential"])
+                            #     end
+                            # end
                         end
                     end
                     #

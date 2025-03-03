@@ -104,7 +104,7 @@ struct Grid
 end
 #
 ## Create a method (of diabatisation) class
-struct Method
+mutable struct Method
     atoms                :: Array{Any}
     states               :: Array{Int}
     min_peak_distance    :: Number
