@@ -551,7 +551,7 @@ function lor_lap(r,w,rc)
     println(beta_geomavg)
     #
     ## compute the derivative of the mixing angle to obtain the NAC
-    return sign(w)*FiniteDifference(r,beta_geomavg,1)
+    return sign(w)*FiniteDifference(collect(r),beta_geomavg,1)
 end
 #
 function mixAng_lorentzian(r,w,rc,amp)                             # Lorentizan mixing angle
@@ -722,7 +722,11 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
         if self.sub_type[1] == "mixang"
             f = func(r,self.Rval...)
         elseif all(self.sub_type .== "N/A")
-            f = map(x -> func(x,self.Rval...),r)
+            if self.type == "lor_lap"
+                f = func(collect(r),self.Rval...)
+            else
+                f = map(x -> func(x,self.Rval...),r)
+            end
         else
             f = map(x -> func(x,self.Rval...,self.sub_type),r)
         end

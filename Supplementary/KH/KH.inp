@@ -11,7 +11,7 @@ method
 	regularisation potential
 	n_evo_grid_points 50000
 	r_boundary_condition 0 1 0 0 0 -1 -1 0 0
-	abinitio_fit false
+	abinitio_fit true
 	solve_vibronic false
 end
 

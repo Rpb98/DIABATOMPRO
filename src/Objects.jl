@@ -1,7 +1,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DEFINE OBJECT CLASSES ~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 ## create the PEC class
-struct PEC
+mutable struct PEC
     ID           :: Int
     name         :: String
     obj_type     :: String
@@ -97,7 +97,7 @@ mutable struct SWITCH
 end
 #
 ## Create a grid class
-struct Grid
+mutable struct Grid
     npoints            :: Int
     range              :: Tuple{Number,Number}
     interpolation_type :: String

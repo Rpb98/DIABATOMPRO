@@ -294,6 +294,7 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
     #
     ## loop over different NACs
     xidx = 0
+
     for key in keys(NonAdiabaticCoupling)
             xidx +=1
             #

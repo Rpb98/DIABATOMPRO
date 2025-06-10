@@ -20,18 +20,14 @@ function KE_factor(m1,m2)
     #
     return factor
 end
-
 global state_v_wav
-
 Ne = 2
-vmax = 500
+vmax = 1000
 Ngrid = 10001
 state_v_wav = Array{Float64}(undef, Ne, vmax, Ngrid)
-
-
 # Example: Compute roots and weights
 rmin = 0.5
-rmax = 6
+rmax = 10
 r = collect(LinRange(rmin,rmax,Ngrid))
 h = r[2]-r[1]
 #
@@ -413,59 +409,86 @@ function adiabatic_HO(r, V1d, V2d, gamma, re)
     return [V1a, V2a], W12, beta
 end
 #
-vmax = 500
-#
-V1_ = HarmonicOscillator.(r)
-V2_ = HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000)
-V__ = [V1_,V2_]
-#
-spl = Spline1D(r, V1_ .- V2_)
-x0 = roots(spl)
-rcross = x0[findfirst(3.5 .< x0 .< 4.5)]
+function repulsive(r,C3,C6)
+    return C3*r^(-3) + C6*r^(-6)
+end
 #
 ## evaluate quadrature points
 R = LinRange(r[1],r[end], vmax)
 h = R[2] - R[1]
 #
-V1 = Diagonal(HarmonicOscillator.(R))
-V2 = Diagonal(HarmonicOscillator.(R,re=4.2,nu=700,Ve=1000))
-V_ = [V1,V2]
 #
-V, _, _ = adiabatic_HO(R, HarmonicOscillator.(R), HarmonicOscillator.(R,re=4.2,nu=700,Ve=1000), 0.03, rcross)
-#
-V = [Diagonal(V[1]), Diagonal(V[2])]
-#
-Va, W12, b12 = adiabatic_HO(r, V1_, V2_, 0.03, rcross)
+V1 = repulsive.(R,1e4,1e4)
 #
 T = SincDVR_KinMat(vmax, r[1], r[end], KE_factor(12,1.007825032))
-E, eigenvectors = solve_vibrational_schrodinger(T, V[1], r, R, h, 1)
-#
-# plt.figure()
-# for (idx,Vi) in enumerate(V)
-#     E, eigenvectors = solve_vibrational_schrodinger(T, Vi, r, R, h, idx)
+E, eigenvectors = solve_vibrational_schrodinger(T, Diagonal(V1), r, R, h, 1)
+
+
+E_min, E_max = minimum(E), maximum(E)
+num_bins = 50  # Number of bins
+bins = range(E_min, E_max, length=num_bins)
+
+# Compute histogram
+hist_values, edges = histogram(E, bins, normalize=true)  # Normalize to get density
+bin_centers = (edges[1:end-1] .+ edges[2:end]) / 2  # Midpoints of bins
+
+# Plot DOS
+plot(bin_centers, hist_values, label="DOS (Histogram)", xlabel="Energy (E)", ylabel="Density of States", lw=2, seriestype=:steppost)
+
+# #
+
+# #
+# V1_ = HarmonicOscillator.(r)
+# V2_ = HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000)
+# V__ = [V1_,V2_]
+# #
+# spl = Spline1D(r, V1_ .- V2_)
+# x0 = roots(spl)
+# rcross = x0[findfirst(3.5 .< x0 .< 4.5)]
+# #
+# ## evaluate quadrature points
+# R = LinRange(r[1],r[end], vmax)
+# h = R[2] - R[1]
+# #
+# V1 = Diagonal(HarmonicOscillator.(R))
+# V2 = Diagonal(HarmonicOscillator.(R,re=4.2,nu=700,Ve=1000))
+# V_ = [V1,V2]
+# #
+# V, _, _ = adiabatic_HO(R, HarmonicOscillator.(R), HarmonicOscillator.(R,re=4.2,nu=700,Ve=1000), 0.03, rcross)
+# #
+# V = [Diagonal(V[1]), Diagonal(V[2])]
+# #
+# Va, W12, b12 = adiabatic_HO(r, V1_, V2_, 0.03, rcross)
+# #
+# T = SincDVR_KinMat(vmax, r[1], r[end], KE_factor(12,1.007825032))
+# E, eigenvectors = solve_vibrational_schrodinger(T, V[1], r, R, h, 1)
+V = [V1]
+plt.figure()
+for (idx,Vi) in enumerate(V)
+    # E, eigenvectors = solve_vibrational_schrodinger(T, Vi, r, R, h, idx)
     
-#     plt.plot(r,Va[idx])
-#     for (v,e) in enumerate(E[1:10])
-#         Psi_v = state_v_wav[idx,v,:] #Vibronic_Wavefunction(v-1, eigenvectors, r[1], r[end], vmax, r)
-#         # plt.axhline(e)
-#         #
-#         ## compute the scaling for the wavefunction to plot
-#         ∂E = E[v+1] - e
-#         #
-#         scale = 0.4 * ∂E
-#         #
-#         prob_density = (Psi_v).^2
-#         prob_density_norm = prob_density ./ maximum(prob_density)
-#         #
-#         ## compute where the wavefunction drops below 1e-4
-#         mask = prob_density_norm .> 1e-4
-#         idx_i = findfirst(mask)
-#         idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
-#         #
-#         plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ e)
-#     end
-#     plt.ylim(0,E[5]*1.1)
-# end
+    plt.plot(R,V[idx])
+    for (v,e) in enumerate(E[1:1000])
+        Psi_v = state_v_wav[idx,v,:] #Vibronic_Wavefunction(v-1, eigenvectors, r[1], r[end], vmax, r)
+        # plt.axhline(e)
+        #
+        ## compute the scaling for the wavefunction to plot
+        ∂E = E[v+1] - e
+        #
+        scale = 0.4 * ∂E
+        #
+        prob_density = (Psi_v).^2
+        prob_density_norm = prob_density ./ maximum(prob_density)
+        #
+        ## compute where the wavefunction drops below 1e-4
+        mask = prob_density_norm .> 1e-4
+        idx_i = findfirst(mask)
+        idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
+        #
+        plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ e)
+    end
+    plt.ylim(0,1e5)
+end
 
 
 #
@@ -496,16 +519,16 @@ function simps(fx::AbstractVector, a::Real, b::Real)
 end
 
 
-y = state_v_wav[1,1,:]
+# y = state_v_wav[1,1,:]
 
-d2y = FiniteDifference(collect(r),y,2)
+# d2y = FiniteDifference(collect(r),y,2)
 
-println("Ke_11 from sinc = ",T[1,1]," from integral = ",simps(y .* d2y, r[1],r[end]))
+# println("Ke_11 from sinc = ",T[1,1]," from integral = ",simps(y .* d2y, r[1],r[end]))
 
 
-dim = Ne*vmax
+# dim = Ne*vmax
 
-T_v = zeros(Float64, dim, dim)
+# T_v = zeros(Float64, dim, dim)
 
 # for state_i = 1 : Ne
 #     #
@@ -518,6 +541,10 @@ T_v = zeros(Float64, dim, dim)
 #             T_v = simps(state_v_wav[state_i,v_i,:] .* FiniteDifference(r,state_v_wav[state_j,v_j,:],2), r[1],r[end])
 
 #     for  state_j = state_i + 1 : Ne
+
+
+
+
 
 
 
