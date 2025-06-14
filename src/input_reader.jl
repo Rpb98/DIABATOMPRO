@@ -273,8 +273,17 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         Calculation["save"] = save
     #
     ## potential objects
-    elseif object_key == "poten"                                  
+    elseif occursin("poten",lowercase(object_key))                          
         obj_type = "poten"
+        #
+        ## fitting range
+        range_init = parse.(Float64,input_values["fit_range"])
+        #
+        if (range_init[1] == -1e100)&(range_init[2]==1e100)
+            range = Calculation["grid"].range 
+        else
+            range = parse.(Float64,input_values["fit_range"])
+        end
         #
         ## if object has grid type, parse left column to floats (bonds)
         if input_values["type"]=="grid"
@@ -285,8 +294,8 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         object = PEC(parse.(Int,input_values["id"])[1],
                                 input_values["name"],
                                 "PEC",
-                 parse.(Float64,input_values["mult"]),
-                 parse.(Float64,input_values["lambda"]),
+                     parse.(Float64,input_values["mult"]),
+                     parse.(Float64,input_values["lambda"]),
                                 input_values["symmetry"],
                                 input_values["type"],
                                 input_values["sub-types"],
@@ -294,9 +303,17 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                      parse.(Int,input_values["nparameters"]),
                                 input_values["Lval"],
                                 input_values["Rval"],
-                  parse(Float64,input_values["factor"]))
+                     parse(Float64,input_values["factor"]),
+                                input_values["fit"],
+                                input_values["bounds"],
+                                input_values["Rval"],
+                                range)
         #
-        Potential[object.ID]=object
+        if occursin("abinitio",lowercase(object_key))
+            abinitio[(obj_type,object.ID)]=object 
+        else
+            Potential[object.ID]=object 
+        end
         #
         return object, obj_type
     #

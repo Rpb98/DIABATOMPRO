@@ -34,8 +34,8 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
-read_file(fname)
+# fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
+read_file("../Supplementary/SO/SO_C.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 # include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
 include("Build_Hamiltonian_Matrix.jl")
@@ -46,8 +46,34 @@ global r
 r = LinRange(Calculation["grid"].range[1],
              Calculation["grid"].range[2],
              Calculation["grid"].npoints)  
-#
-## initialise diabatom object
+
+if Calculation["method"].abinitio_fit == true
+    fit_abinitio()
+end
+
+plt.ylim(40000,60000)
+
+# plt.figure()
+# plt.plot(r, PotMat[:,3,3])
+# plt.plot(abinitio[("poten",3)].Lval, abinitio[("poten",3)].Rval,"--")
+# # plt.plot(r, PotMat[:,4,4])
+
+# # plt.plot(r, PotMat[:,1,1],"--")
+# # plt.plot(r, PotMat[:,2,2],"--")
+
+# # plt.plot(r, PotMat[:,5,5])
+# # plt.plot(r, PotMat[:,6,6])
+# # plt.plot(r, PotMat[:,7,7])
+
+# plt.ylim(35000,75000)
+
+
+
+
+
+
+# #
+# ## initialise diabatom object
 # diabatom = Dict()
 # diabatom["r"] = r
 # diabatom["Hamiltonian"] = Hamiltonian
@@ -58,8 +84,8 @@ r = LinRange(Calculation["grid"].range[1],
 # diabatom["EAMC"] = EAMC
 # diabatom["Dipole"] = Dipole
 # diabatom["NonAdiabaticCoupling"] = NonAdiabaticCoupling
-#
-## run the diabatiser
+
+# # run the diabatiser
 # if Calculation["method"].abinitio_fit == true
 #     fit_abinitio()
 # elseif Calculation["method"].abinitio_fit == false
@@ -213,20 +239,20 @@ r = LinRange(Calculation["grid"].range[1],
 # axs[2,1].text(9.6,0.2,L"$\langle (2)^1\Sigma^+|\frac{d}{dr}|(3)^1\Sigma^+\rangle$",color="green",fontsize=9)
 # axs[2,1].text(1.4,0.1,L"$\langle X^1\Sigma^+|\frac{d}{dr}|(3)^1\Sigma^+\rangle$",color="orange",fontsize=9)
 
-# plt.savefig("./KH_abinitio_PECs_NACs.png",bbox_inches="tight",dpi=300)
+# # plt.savefig("./KH_abinitio_PECs_NACs.png",bbox_inches="tight",dpi=300)
 
 
 
 
-lab_dict = Dict{Int, String}(
-      1 => L"$X^1\Sigma^+$",
-      2 => L"$(2)^1\Sigma^+$",
-      3 => L"$(3)^1\Sigma^+$",
-      4 => L"$(1)^3\Sigma^+$",
-      5 => L"$(2)^3\Sigma^+$",
-      6 => L"$(1)^1\Pi$",
-      7 => L"$(1)^3\Pi$"
-  )
+# lab_dict = Dict{Int, String}(
+#       1 => L"$X^1\Sigma^+$",
+#       2 => L"$(2)^1\Sigma^+$",
+#       3 => L"$(3)^1\Sigma^+$",
+#       4 => L"$(1)^3\Sigma^+$",
+#       5 => L"$(2)^3\Sigma^+$",
+#       6 => L"$(1)^1\Pi$",
+#       7 => L"$(1)^3\Pi$"
+#   )
 # plt.figure(figsize=[5,3])
 # for key in keys(SpinOrbit)
 #     i, j = key
@@ -307,36 +333,36 @@ lab_dict = Dict{Int, String}(
 
 
 
-col2 = ["blue","green","orange"]
-plt.figure()
-global count,count2
-count2 = 0
-for i=1:dim
-    global count2
-    #
-    for j=i+1:dim
-        if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-            global count2
-            count2+=1
-            #
-            Wij_ai = abinitio[("NAC",[i,j])]
-            idx = closest_value_index(Wij_ai.Lval, 3.5)
-            idxf = closest_value_index(Wij_ai.Lval, 9)
+# col2 = ["blue","green","orange"]
+# plt.figure()
+# global count,count2
+# count2 = 0
+# for i=1:dim
+#     global count2
+#     #
+#     for j=i+1:dim
+#         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#             global count2
+#             count2+=1
+#             #
+#             Wij_ai = abinitio[("NAC",[i,j])]
+#             idx = closest_value_index(Wij_ai.Lval, 3.5)
+#             idxf = closest_value_index(Wij_ai.Lval, 9)
 
-            #
-            spl = Spline1D(r,Objects["nac"][:,i,j])
-            W_func = spl(Wij_ai.Lval)
-            #
-            # plt.plot(r,Objects["nac"][:,i,j],color=col2[count2],label=string(i)*string(j))
+#             #
+#             spl = Spline1D(r,Objects["nac"][:,i,j])
+#             W_func = spl(Wij_ai.Lval)
+#             #
+#             # plt.plot(r,Objects["nac"][:,i,j],color=col2[count2],label=string(i)*string(j))
 
-            diff = (Wij_ai.Rval[idx:idxf] .- W_func[idx:idxf])
-            #
-            RMS = sqrt(sum(diff.^2)/length(diff))
-            println("RMS for ",i," ",j," = ",RMS)
-            plt.plot(Wij_ai.Lval[idx:idxf],(Wij_ai.Rval[idx:idxf] .- W_func[idx:idxf]),color=col2[count2],alpha=1)
-        end
-    end
-end
+#             diff = (Wij_ai.Rval[idx:idxf] .- W_func[idx:idxf])
+#             #
+#             RMS = sqrt(sum(diff.^2)/length(diff))
+#             println("RMS for ",i," ",j," = ",RMS)
+#             plt.plot(Wij_ai.Lval[idx:idxf],(Wij_ai.Rval[idx:idxf] .- W_func[idx:idxf]),color=col2[count2],alpha=1)
+#         end
+#     end
+# end
 
 
 

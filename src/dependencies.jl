@@ -16,6 +16,7 @@ using DataFrames
 using CSV
 using Printf
 using LaTeXStrings
+# using Roots
 #
 ## legacy libraries
 # using Dates

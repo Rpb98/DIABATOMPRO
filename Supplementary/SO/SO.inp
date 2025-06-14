@@ -1,12 +1,12 @@
 grid                
-  npoints 1001
-  range   1.2 5.0    
+  npoints 301
+  range   1.1 6.0    
   interpolation_type  cubic
 end
 
 method   
     atoms 32S 16O             
-    states 2 3
+    states 1 2
 	diabatisation 2-state-approximation
 	regularisation spin-orbit
 	n_evo_grid_points 50000

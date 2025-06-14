@@ -2,36 +2,40 @@
 #
 ## create the PEC class
 mutable struct PEC
-    ID           :: Int
-    name         :: String
-    obj_type     :: String
-    mult         :: Number
-    lambda       :: Number
-    symmetry     :: String
-    type         :: String
-    sub_type     :: Tuple{String,String,String}
-    units        :: Tuple{String,String}
-    nparameters  :: Tuple{Int,Int,Int}
-    Lval         :: Array{Any}
-    Rval         :: Array{Number}
-    factor       :: Float64
+    ID                :: Int
+    name              :: String
+    obj_type          :: String
+    mult              :: Number
+    lambda            :: Number
+    symmetry          :: String
+    type              :: String
+    sub_type          :: Tuple{String,String,String}
+    units             :: Tuple{String,String}
+    nparameters       :: Tuple{Int,Int,Int}
+    Lval              :: Array{Any}
+    Rval              :: Array{Number}
+    factor            :: Float64
+    fit               :: Array{Int}
+    bounds            :: Array{Any}
+    fitted_parameters :: Array{Any}
+    fit_range         :: Tuple{Number,Number}
 end
 #
 ## create the spin-orbit class
 struct SOC
-    ID       :: Array{Int}
-    name     :: String
-    obj_type :: String
-    spin     :: Tuple{Number,Number}
-    sigma    :: Tuple{Number,Number}
-    lambda   :: Tuple{Number,Number}
-    Lz       :: Tuple{String,String}
-    type     :: String
-    units    :: Tuple{String,String}
-    factor   :: Any
-    Lval     :: Array{Any}
-    Rval     :: Array{Number}
-    sub_type :: Tuple{String,String,String}
+    ID        :: Array{Int}
+    name      :: String
+    obj_type  :: String
+    spin      :: Tuple{Number,Number}
+    sigma     :: Tuple{Number,Number}
+    lambda    :: Tuple{Number,Number}
+    Lz        :: Tuple{String,String}
+    type      :: String
+    units     :: Tuple{String,String}
+    factor    :: Any
+    Lval      :: Array{Any}
+    Rval      :: Array{Number}
+    sub_type  :: Tuple{String,String,String}
 end
 #
 ## create the electronic angular momentum class

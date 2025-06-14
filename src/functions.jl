@@ -548,7 +548,7 @@ function lor_lap(r,w,rc)
     #
     ## compute geom average lorentzian laplacian mixing angle
     beta_geomavg = mixAng_lor_lap.(r,w,rc)
-    println(beta_geomavg)
+    # println(beta_geomavg)
     #
     ## compute the derivative of the mixing angle to obtain the NAC
     return sign(w)*FiniteDifference(collect(r),beta_geomavg,1)
@@ -591,8 +591,8 @@ function mixAng_lor_lap(r,w,rc)   # geometrical averaged Lorent-Laplace mixing a
 	end
 end
 #
-function DC_beta(R, V1, V2, BETA, GAMMA, RC)
-    mixAngle = map(x -> eval(Symbol("mixAng_"*BETA))(x,GAMMA,RC), R)
+function DC_beta(R, V1, V2, BETA, ARGS...) #GAMMA, RC
+    mixAngle = map(x -> eval(Symbol("mixAng_"*BETA))(x,ARGS...), R)
     PotenDiffOver2 = (V2.-V1)./2
 	return PotenDiffOver2.*tan.(mixAngle.*2)
 end
@@ -603,64 +603,110 @@ function discriminant(a,b,c,d)
     return lm, lp
 end
 #
-function COUPLED_PEC(R, TYPES, PARAMS, ARGS, COMPONENT, pDICTS; betaCouple=false)
+function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
     #
-    ## evaluate potential components of coupled state
-    V1d = map(x->eval(Symbol(TYPES[1]))(x,PARAMS[1][1:8]...,PARAMS[1][9:end]),R)
-    V2d = map(x->eval(Symbol(TYPES[2]))(x,PARAMS[2][1:8]...,PARAMS[2][9:end]),R)
-    #
-    ## find crossing point
-    spl = Spline1D(R, map(i->V2d[i]-V1d[i],1:length(R)))
-    RC = roots(spl)[1]
-    #
-    ## evaluate the diabatic coupling
-    if (betaCouple==true)&(TYPES[3]!="EMO")            # mixing angle defined DC 
-        DC = DC_beta(R,
-                     V1d,
-                     V2d,
-                     TYPES[3],
-                     pDICTS[3]["gamma"],
-                     RC)
-    elseif (betaCouple==false)&(TYPES[3]!="EMO")       # lorentz, laplace, gauss
-        #
-        ## find index where expansion parameters begin
-        dx = findfirst(x -> occursin("0",x), ARGS[3])
-        #
-        ## compute DC
-        DC = map(x -> eval(Symbol("DC_"*TYPES[3]))(x,
-                                                   pDICTS[3]["gamma"],
-                                                   RC,
-                                                   pDICTS[3]["rref"],
-                                                   pDICTS[3]["p"],
-                                                   PARAMS[3][idx:end]
-                                                   ), R)
-    elseif (betaCouple==false)&(TYPES[3]=="EMO")                  #  EMO type DC
-        DC = map(x -> EMO(x,pDICTS[3]["ve"],   
-                            pDICTS[3]["re"],   
-                            pDICTS[3]["ae"],   
-                            pDICTS[3]["rref"], 
-                            pDICTS[3]["pl"],   
-                            pDICTS[3]["pr"],   
-                            pDICTS[3]["nl"],   
-                            pDICTS[3]["nr"],   
-                            PARAMS[3][9:end]), 
-                            R)
-    elseif (betaCouple==true)&(TYPES[3]=="EMO") 
-        print("\n")
-        print("***EMO TYPE DC WITH THE BETA COUPLING POTEN TYPE NOT SUPPORTED.") 
-        print("\n")                      
+    ## index mapping function
+    function index_map(i,j,N)
+        if i == j
+            return i
+        else
+            return N + (i-1)*N - ((i-1)*i/2) + (j-i)
+        end
     end
     #
-    ## diagonalise coupled 2x2 system through the discriminant of the dia PotMat
-    V1a, V2a = discriminant(V1d,DC,DC,V2d)
+    function generate_ij_pairs(DIMENSION::Int)
+        #
+        ## Part 1: Diagonal elements (i,i)
+        diagonal_pairs = [(i, i) for i = 1:DIMENSION]
+        #
+        ## Part 2: Off-diagonal elements (i,j) where i < j, ordered by i then j
+        off_diagonal_pairs = Tuple{Int,Int}[] # Initialize an empty array of tuples
+        for i = 1:DIMENSION
+            for j = (i+1):DIMENSION # j starts from i+1 to ensure i < j
+                push!(off_diagonal_pairs, (i, j))
+            end
+        end
+        #
+        ## Combine the two parts. The `vcat` function concatenates arrays
+        return vcat(diagonal_pairs, off_diagonal_pairs)
+    end
     #
-    # return objects
-    if COMPONENT==1
-	    return V1a
-    elseif COMPONENT==2
-        return V2a
+    ## find dimension of potential matrix to diagonalise
+    DIMENSION = Int(RVAL[1])
+    #
+    ## find the component the user wishes to compute
+    COMPONENT = Int(RVAL[end])
+    #
+    ## slice the parameter arrays according to the number of parameters in Np
+    L = []
+    R = []
+    i = 2
+    for N in Np
+        f = Int(i + N - 1)
+        #
+        ## populate array slices
+        push!(L, LVAL[i:f])
+        push!(R, RVAL[i:f])
+        #
+        ## update start index
+        i = f + 1
+    end
+    V = zeros(Float64, length(r), DIMENSION, DIMENSION)
+    #
+    mu_idx = generate_ij_pairs(DIMENSION)
+    #
+    for (mu, pair) in enumerate(mu_idx)
+        #
+        i, j = pair
+        #
+        if (i!=j)&(betaCouple==true)
+            V1d = V[:,i,i]
+            V2d = V[:,j,j]
+            #
+            ## find crossing point
+            spl = Spline1D(r, map(i->V2d[i]-V1d[i],1:length(r)))
+            root = Dierckx.roots(spl)
+            if !isempty(root)
+                RC = root[1]
+            else
+                RC = R[mu][2]
+            end
+            #
+            R[mu][2] = RC
+            #
+            y = DC_beta(r,
+                        V1d,
+                        V2d,
+                        TYPES[mu],
+                        R[mu]...)
+        else
+            _, y = ComputeProperty_viaParameters(r, 
+                                                TYPES[mu],
+                                                L[mu], 
+                                                R[mu],
+                                                "pec",
+                                                ["angstrom","cm-1"],
+                                                ("N/A","N/A","N/A"),
+                                                1)
+        end
+        #
+        V[:,i,j] .= y
+    end
+    #
+    ## diagonalise the potential matrix
+    if DIMENSION == 2
+        V1a, V2a = discriminant(V[:,1,1],V[:,1,2],V[:,1,2],V[:,2,2])
+        #
+        adi = [V1a, V2a]
+        #
+        return adi[COMPONENT]
+    else
+        Va = map(x -> eigen(V[x,:,:]).values[COMPONENT], collect(1:length(r)))
+        #
+        return Va
     end
 end
+
 #
 # function sigmoid_polynom_decay_24(r, gamma0, r0, )
 #
@@ -713,6 +759,31 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
         # ## convert units
         # r, f_interpolated = unitConversion(r, f_interpolated, self.obj_type, self.units)
         return r, f_interpolated.*self.factor
+    #
+    elseif any(occursin.(["coupled_pec","coupled-pec"], lowercase(self.type)))
+        #
+        coupled_beta = false
+        #
+        if occursin("beta",lowercase(self.type)); coupled_beta = true; end
+        #
+        Nparameters = []
+        subtypes = []
+        #
+        for s in self.sub_type
+            #
+            subtype, n = split(s, "-")
+            #
+            push!(subtypes, subtype)
+            #
+            push!(Nparameters,  parse(Float64,n))
+        end
+        #
+        f = COUPLED_PEC(collect(r), self.Lval, self.Rval, subtypes, Nparameters, betaCouple = coupled_beta)
+        #
+        ## convert units
+        r, f = unitConversion(r, f, self.obj_type, self.units)
+        return r, f .* self.factor
+    #
     else
         #
         ## 
@@ -768,6 +839,29 @@ function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, su
         f_interpolated = spline(r)
         #
         return r, f_interpolated.*factor
+    elseif any(occursin.(["coupled_pec","coupled-pec"], lowercase(ftype)))
+        #
+        coupled_beta = false
+        #
+        if occursin("beta",lowercase(ftype)); coupled_beta = true; end
+        #
+        Nparameters = []
+        subtypes = []
+        #
+        for s in sub_type
+            #
+            subtype, n = split(s, "-")
+            #
+            push!(subtypes, subtype)
+            #
+            push!(Nparameters,  parse(Float64,n))
+        end
+        #
+        f = COUPLED_PEC(collect(r), Lval, Rval, subtypes, Nparameters, betaCouple = coupled_beta)
+        #
+        ## convert units
+        r, f = unitConversion(r, f, obj_type, units)
+        return r, f .* factor
     else
         #
         ## 
@@ -793,6 +887,7 @@ function unitConversion(x, y, obj, units)
     ## define an atomic unit standard for different objects
     unitStd = Dict()
     unitStd["pec"] = "eh"
+    unitStd["poten"] = "eh"
     unitStd["soc"] = "cm-1"
     unitStd["dm"]  = "ea0"
     unitStd["nac"] = "ang-1"
@@ -921,12 +1016,31 @@ function fit_abinitio()
     end
     #
     options = Optim.Options(show_trace = true)
+    #
+    fit_flag = false
+    #
     for key in keys(abinitio)
         #
-        bra_state = key[2][1]
-        ket_state = key[2][2]
+        if key[1] == "poten"
+            if key[2] in Calculation["method"].states
+                fit_flag = true
+                #
+                i = floor(Int64, key[2][1])
+                j = floor(Int64, key[2][1])
+            end
+        else
+            bra_state = key[2][1]
+            ket_state = key[2][2]
+            #
+            if (bra_state in Calculation["method"].states)&(ket_state in Calculation["method"].states)
+                fit_flag = true
+                #
+                i = floor(Int64, key[2][1])
+                j = floor(Int64, key[2][2])
+            end
+        end
         #
-        if (bra_state in Calculation["method"].states)&(ket_state in Calculation["method"].states)
+        if fit_flag == true
             fitting_object = Hamiltonian[key]
             #
             x_ai = abinitio[key].Lval
@@ -942,8 +1056,8 @@ function fit_abinitio()
             y_ai = y_ai[mask]
             #
             ## bra and ket labels
-            i = floor(Int64, key[2][1])
-            j = floor(Int64, key[2][2])
+            # i = floor(Int64, key[2][1])
+            # j = floor(Int64, key[2][2])
             #
             ## extract fitting flags, i.e. turn of parameter variation in fit
             p_excludeFromFit = fitting_object.fit

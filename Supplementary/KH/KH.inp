@@ -28625,7 +28625,7 @@ sigma 0.0 0.0
 lambda 0 0
 type grid
 factor 1.0
-_range 3.3 30
+fit_range 3.3 30
 values
 	0.500000	0.058200000000
 	0.510000	0.044500000000
@@ -29551,7 +29551,7 @@ sigma 0.0 0.0
 lambda 0 0
 type grid
 factor 1.0
-_range 3.3 10
+fit_range 3.3 10
 values
 	0.500000	0.128093663247
 	0.510000	0.161700225587
@@ -30477,7 +30477,7 @@ sigma 0.0 0.0
 lambda 0 0
 type grid
 factor 1.0
-_range 2 20
+fit_range 2 20
 values
 	-10	0
 	-9.5	0
