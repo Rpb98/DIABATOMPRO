@@ -127,6 +127,11 @@ function initialise_input_parameters(line::String)
     #
     input_values["nroots"] = "1"
     #
+    ## vibronic solver (sinc-DVR) block
+    input_values["enermax"] = false
+    #
+    input_values["contraction"] = false
+    #
     ## legacy parameters
     #
     input_values["grid_resolution"] = 0.0001
@@ -453,6 +458,24 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         SwitchingFunction[object.ID]=object
         # 
         return object, obj_type
+    #
+    ## if object is a solve vibronic type
+    elseif lowercase(object_key) == "vibronic_solver"                                       
+        #
+        ## if no enermax or contraction given, then set them to some value
+        if input_values["enermax"] == false
+            input_values["enermax"] = ["-1e100"]
+        end
+        #
+        if input_values["contraction"] == false
+            input_values["contraction"] = ["-1"]
+        end
+        #
+        solver = Solve_Vibronic( parse.(Float64,input_values["enermax"]),
+                                 parse.(Int64,input_values["contraction"])
+                                )
+        #
+        Calculation["vibronic_solver"] = solver
     end
 end
 #
@@ -537,7 +560,8 @@ function read_file(fname)
                    "dipole", 
                        "lx", 
                       "nac",
-                   "switch"]
+                   "switch",
+          "vibronic_solver"]
         #
         ## Loop over each line in the input file
         for (LineIndex, line) in enumerate(eachline(f))

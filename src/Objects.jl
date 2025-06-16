@@ -133,6 +133,12 @@ struct Save
 	nroots :: String
 end
 #
+## Create a sinc-DVR vibronic solver class
+mutable struct Solve_Vibronic
+    enermax              :: Tuple{Vararg{Float64}}
+	contraction          :: Tuple{Vararg{Int64}}
+end
+#
 ## create a vibronic wavefunction class
 struct psi_v
     electronic_state :: Int

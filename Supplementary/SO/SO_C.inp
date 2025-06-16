@@ -16,6 +16,11 @@ method
 	abinitio_fit true
 end
 
+vibronic_solver
+	enermax      10 20 30 40
+	contraction 1 2 3 4
+end
+
 save
 	as DataFrame
 	jrot 0

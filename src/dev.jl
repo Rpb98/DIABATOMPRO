@@ -10,6 +10,8 @@ include("functions.jl")
 include("input_reader.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATISER ROUTINES ~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Diabatiser.jl")
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~ VIBRONIC SOLVER ROUTINES ~~~~~~~~~~~~~~~~~~~~~~~~~#
+include("vibronic_solver.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATOMPRO FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 using PyPlot
@@ -47,11 +49,20 @@ r = LinRange(Calculation["grid"].range[1],
              Calculation["grid"].range[2],
              Calculation["grid"].npoints)  
 
-if Calculation["method"].abinitio_fit == true
-    fit_abinitio()
+# if Calculation["method"].abinitio_fit == true
+#     fit_abinitio()
+# end
+
+#
+## compute vibronic energies and wavefunctions for a non-rotating molecule if
+## the 'vibronic_solver' key is in Calculation
+if haskey(Calculation, "vibronic_solver")
+    #
+    contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
 end
 
-plt.ylim(40000,60000)
+
+# plt.ylim(40000,60000)
 
 # plt.figure()
 # plt.plot(r, PotMat[:,3,3])

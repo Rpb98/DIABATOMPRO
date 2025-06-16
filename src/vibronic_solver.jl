@@ -1,23 +1,4 @@
-using LegendrePolynomials
-using PyPlot
-using FastGaussQuadrature
-using LinearAlgebra
-using Dierckx
-using Statistics
 
-function KE_factor(m1::Float64,m2::Float64)::Float64
-    #
-    ## constants
-    h = 6.626069570000*10^(-34)   # J s
-    c = 299792458.0000       # m/s
-    amu = 1.660538921000*10^(-27) # kg
-    #
-    ## reduced mass
-    mu = amu*m1*m2/(m1+m2)
-    #
-    ## KE factor
-    return (h/(8*pi^2*mu*c))*10^(18)
-end
 #
 function sinc_function(x::Float64, xj::Float64, h::Float64)::Float64
     # Avoid division by zero: handle x == x_j separately
@@ -62,12 +43,14 @@ function SincDVR_PotMat(vmax::Int, fPot, r_min::Float64, r_max::Float64)::Diagon
     return V
 end
 #
-function solve_vibrational_schrodinger( T                :: Matrix{Float64}, 
-                                        V                :: Diagonal{Float64, Vector{Float64}}, 
-                                        r                :: Vector{Float64}, 
-                                        h                :: Float64, 
-                                        electronic_state :: Int64
-                                        )                :: Tuple{Vector{Float64}, Matrix{Float64}}
+function solve_vibrational_schrodinger!( T                :: Matrix{Float64}, 
+                                         V                :: Diagonal{Float64, Vector{Float64}}, 
+                                         r                :: Vector{Float64}, 
+                                         h                :: Float64, 
+                                         electronic_state :: Int64,
+                                         state_v_wfn      :: Array{Float64, 3},
+                                         state_v_ener     :: Matrix{Float64}
+                                         )                :: Tuple{Vector{Float64}, Matrix{Float64}}
     """
     Solve the vibrational Schrödinger equation Hψ = Eψ using DVR.
     
@@ -97,7 +80,9 @@ function solve_vibrational_schrodinger( T                :: Matrix{Float64},
         #
         v = idx - 1
         #
-        state_v_wav[electronic_state,v+1,:] .= Vibronic_Wavefunction(v, eigenvectors, φ, r)
+        state_v_wfn[electronic_state,v+1,:] .= Vibronic_Wavefunction(v, eigenvectors, φ, r)
+        #
+        state_v_ener[electronic_state,v+1] = eigenvalues[idx]
     end
     #
     return eigenvalues, eigenvectors
@@ -122,106 +107,180 @@ function Vibronic_Wavefunction( v                 :: Int64,
     return Ψv
 end
 #
-@views function simps(f::Function, x::AbstractRange) #A range with odd number
-    h = step(x)
-    I= h/3*(f(x[1])+2*sum(f,x[3:2:end-2])+4*sum(f,x[2:2:end-1])+f(x[end]))
-    return I
-end
-
-# from the function and range definition
-function simps(f::Function, a::Real, b::Real, n::Integer) #n as an even number
-    return simps(f, range(a, b, length=n+1))
-end
-
-@views function simps(fx::AbstractVector, h::Real)
-    if length(fx)%2==1
-        I= h/3*(fx[1]+2*sum(fx[3:2:end-2])+4*sum(fx[2:2:end-1])+fx[end])
-    else
-        I=h/3*(fx[1]+2*sum(fx[3:2:end-5])+4*sum(fx[2:2:end-4])+fx[end-3])+
-        (3*h/8)*(fx[end-3]+3fx[end-2]+3fx[end-1]+fx[end])
+function vibronic_eigensolver(r::Vector{Float64}, V::Array{Float64, 3}, vmax::Int64, states::Vector{Int64}, m1::Float64, m2::Float64)
+    #
+    ## compute number of electronic states
+    N_el = length(states)
+    #
+    ## initialise vibronic wavefunction object
+    state_v_wfn = Array{Float64}(undef, N_el, vmax, vmax)
+    #
+    ## initialise vibronic energy object
+    state_v_ener = Array{Float64}(undef, N_el, vmax)
+    #
+    ## compute the grid seperation
+    h = r[2] - r[1]
+    #
+    ## compute the kinetic energy matrix in sinc-DVR basis
+    T = SincDVR_KinMat(vmax, r[1], r[end], KE_factor(m1,m2))
+    #
+    ## compute the potential matrix in sinc-DVR basis (V) for all electronic states
+    ## and then diagonalise the total Hamiltonian H = T + V
+    for (idx, state) in enumerate(states)
+        #
+        V_state = Diagonal(V[:,state,state])
+        #
+        ## solve vibrational Schrodinger equation for the electronic state
+        E, eigenvectors = solve_vibrational_schrodinger!(T, V_state, r, h, idx, state_v_wfn, state_v_ener)
     end
-    return Float64(I)
-end
-# from the function values and range
-function simps(fx::AbstractVector, a::Real, b::Real)
-    return simps(fx, (b-a)/(length(fx)-1))
-end
-
-#
-function HarmonicOscillator(r; re = 3.5, nu = 1350, m1 = 12, m2 = 1.007825032, Ve = 0)
-    h = 6.626069570000*10^(-34)   # J s
-    c = 299792458.0000            # m/s
-    amu = 1.660538921000*10^(-27) # kg
     #
-    ## reduced mass
-    mu = amu*m1*m2/(m1+m2)
-    #
-    ##
-    factor = 4 * pi^2 * c * 10^(-18) / h
-    return Ve + factor * 0.5 * mu * nu^2 * (r-re)^2
+    ## return energies and vibronic wavefunctions
+    return state_v_wfn, state_v_ener
 end
 #
-
-function vibronic_eigensolver(r, V, vmax)
+function plot_vibronic_solution(r::Vector{Float64}, V::Array{Float64, 3}, states::Vector{int64}, E, psi, vmax::Array{Int64})
     #
-    ## convert potential object into vector of diagonal objects
-    
-
-
-
-
-
-
-global state_v_wav
-Ne = 2
-vmax = 1000
-Ngrid = vmax
-state_v_wav = Array{Float64}(undef, Ne, vmax, vmax)
-# Example: Compute roots and weights
-rmin = 0.5
-rmax = 10
-r = collect(LinRange(rmin,rmax,Ngrid))
-h = r[2]-r[1]
-#
-V1 = Diagonal(HarmonicOscillator.(r))
-V2 = Diagonal(HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000))
-V_ = [V1,V2]
-#
-T = SincDVR_KinMat(vmax, r[1], r[end], KE_factor(12.0,1.007825032))
-#
-V1_ = HarmonicOscillator.(r)
-V2_ = HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000)
-#
-V_ = [V1_,V2_]
-#
-V = [V1,V2]
-plt.figure()
-
-for (idx,Vi) in enumerate(V)
-    E, eigenvectors = solve_vibrational_schrodinger(T, Vi, r, h, idx)
-    
-    plt.plot(R,V_[idx])
-    for (v,e) in enumerate(E[1:5])
-        Psi_v = state_v_wav[idx,v,:] #Vibronic_Wavefunction(v-1, eigenvectors, r[1], r[end], vmax, r)
-        # plt.axhline(e)
+    plt.figure()
+    for state in states
         #
-        ## compute the scaling for the wavefunction to plot
-        ∂E = E[v+1] - e
+        plt.plot(r,V[:,state,state])
         #
-        scale = 0.4 * ∂E
-        #
-        prob_density = (Psi_v).^2
-        prob_density_norm = prob_density ./ maximum(prob_density)
-        #
-        ## compute where the wavefunction drops below 1e-4
-        mask = prob_density_norm .> 1e-4
-        idx_i = findfirst(mask)
-        idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
-        #
-        plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ e)
+        for v_idx=1:vmax[state]
+            #
+            Ev = E[state,v_idx]
+            #
+            Psi_v = psi[state,v_idx,:]
+            #
+            ## compute the scaling for the wavefunction to plot
+            ∂E = E[state,v_idx+1] - Ev
+            #
+            scale = 0.4 * ∂E
+            #
+            prob_density = (Psi_v).^2
+            prob_density_norm = prob_density ./ maximum(prob_density)
+            #
+            ## compute where the wavefunction drops below 1e-4
+            mask = prob_density_norm .> 1e-4
+            idx_i = findfirst(mask)
+            idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
+            #
+            plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ Ev)
+        end
     end
-    plt.ylim(0,1e5)
 end
+
+
+
+
+# global state_v_wav
+# Ne = 2
+# vmax = 1000
+# Ngrid = vmax
+# state_v_wav = Array{Float64}(undef, Ne, vmax, vmax)
+
+# # Example: Compute roots and weights
+# rmin = 0.5
+# rmax = 10
+# r = collect(LinRange(rmin,rmax,Ngrid))
+# h = r[2]-r[1]
+
+# V1 =HarmonicOscillator.(r)
+# V2 =HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000)
+
+# V = zeros(Float64,length(r),2,2)
+# V[:,1,1] .= V1
+# V[:,2,2] .= V2
+
+# states = [1,2]
+
+# contr_vib_wfn, E_vib_contr = vibronic_eigensolver(r, V, vmax, states, 12.0, 1.007825032)
+
+
+
+# plt.figure()
+# for state in states
+#     #
+#     plt.plot(r,V[:,state,state])
+#     #
+#     for v_idx=1:10
+#         #
+#         Ev = E[state,v_idx]
+#         #
+#         Psi_v = psi[state,v_idx,:]
+#         #
+#         ## compute the scaling for the wavefunction to plot
+#         ∂E = E[state,v_idx+1] - Ev
+#         #
+#         scale = 0.4 * ∂E
+#         #
+#         prob_density = (Psi_v).^2
+#         prob_density_norm = prob_density ./ maximum(prob_density)
+#         #
+#         ## compute where the wavefunction drops below 1e-4
+#         mask = prob_density_norm .> 1e-4
+#         idx_i = findfirst(mask)
+#         idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
+#         #
+#         plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ Ev)
+#     end
+# end
+
+# plt.ylim(0,1e5)
+
+
+# function HarmonicOscillator(r; re = 3.5, nu = 1350, m1 = 12, m2 = 1.007825032, Ve = 0)
+#     h = 6.626069570000*10^(-34)   # J s
+#     c = 299792458.0000            # m/s
+#     amu = 1.660538921000*10^(-27) # kg
+#     #
+#     ## reduced mass
+#     mu = amu*m1*m2/(m1+m2)
+#     #
+#     ##
+#     factor = 4 * pi^2 * c * 10^(-18) / h
+#     return Ve + factor * 0.5 * mu * nu^2 * (r-re)^2
+# end
+
+# #
+# V1 = Diagonal(HarmonicOscillator.(r))
+# V2 = Diagonal(HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000))
+# V_ = [V1,V2]
+# #
+# T = SincDVR_KinMat(vmax, r[1], r[end], KE_factor(12.0,1.007825032))
+# #
+# V1_ = HarmonicOscillator.(r)
+# V2_ = HarmonicOscillator.(r,re=4.2,nu=700,Ve=1000)
+# #
+# V_ = [V1_,V2_]
+# #
+# V = [V1,V2]
+# plt.figure()
+
+# for (idx,Vi) in enumerate(V)
+#     E, eigenvectors = solve_vibrational_schrodinger(T, Vi, r, h, idx)
+    
+#     plt.plot(R,V_[idx])
+#     for (v,e) in enumerate(E[1:5])
+#         Psi_v = state_v_wav[idx,v,:] #Vibronic_Wavefunction(v-1, eigenvectors, r[1], r[end], vmax, r)
+#         # plt.axhline(e)
+#         #
+#         ## compute the scaling for the wavefunction to plot
+#         ∂E = E[v+1] - e
+#         #
+#         scale = 0.4 * ∂E
+#         #
+#         prob_density = (Psi_v).^2
+#         prob_density_norm = prob_density ./ maximum(prob_density)
+#         #
+#         ## compute where the wavefunction drops below 1e-4
+#         mask = prob_density_norm .> 1e-4
+#         idx_i = findfirst(mask)
+#         idx_f = lastindex(prob_density_norm) - findfirst(reverse(mask)) + 1
+#         #
+#         plt.plot(r[idx_i:idx_f], scale .* prob_density_norm[idx_i:idx_f] .+ e)
+#     end
+#     plt.ylim(0,1e5)
+# end
 
 
 

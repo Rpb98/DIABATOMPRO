@@ -24,3 +24,10 @@ using LaTeXStrings
 # using StatsBase
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# using LegendrePolynomials
+# using PyPlot
+# using FastGaussQuadrature
+# using LinearAlgebra
+# using Dierckx
+# using Statistics

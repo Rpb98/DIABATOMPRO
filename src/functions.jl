@@ -271,6 +271,31 @@ function cumtrapz(X::T, Y::T) where {T <: AbstractVector}
     out
 end
 #
+## simpson integration
+@views function simps(f::Function, x::AbstractRange) #A range with odd number
+    h = step(x)
+    I= h/3*(f(x[1])+2*sum(f,x[3:2:end-2])+4*sum(f,x[2:2:end-1])+f(x[end]))
+    return I
+end
+# from the function and range definition
+function simps(f::Function, a::Real, b::Real, n::Integer) #n as an even number
+    return simps(f, range(a, b, length=n+1))
+end
+#
+@views function simps(fx::AbstractVector, h::Real)
+    if length(fx)%2==1
+        I= h/3*(fx[1]+2*sum(fx[3:2:end-2])+4*sum(fx[2:2:end-1])+fx[end])
+    else
+        I=h/3*(fx[1]+2*sum(fx[3:2:end-5])+4*sum(fx[2:2:end-4])+fx[end-3])+
+        (3*h/8)*(fx[end-3]+3fx[end-2]+3fx[end-1]+fx[end])
+    end
+    return Float64(I)
+end
+# from the function values and range
+function simps(fx::AbstractVector, a::Real, b::Real)
+    return simps(fx, (b-a)/(length(fx)-1))
+end
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRID FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
 function gridSplitter(Ninit,Nsplit)
@@ -916,7 +941,7 @@ function unitConversion(x, y, obj, units)
     return x, y
 end
 #
-function KE_factor(m1,m2)
+function KE_factor(m1::Float64,m2::Float64)::Float64
     #
     ## constants
     h = 6.626069570000*10^(-34)   # J s
@@ -927,9 +952,7 @@ function KE_factor(m1,m2)
     mu = amu*m1*m2/(m1+m2)
     #
     ## KE factor
-    factor = (h/(8*pi^2*mu*c))*10^(18)
-    #
-    return factor
+    return (h/(8*pi^2*mu*c))*10^(18)
 end
 #
 function closest_value_index(arr, value)
