@@ -1,5 +1,5 @@
 grid                
-  npoints 501
+  npoints 1001
   range   1.1 6.0    
   interpolation_type  cubic
 end
@@ -18,7 +18,7 @@ end
 
 vibronic_solver
 	enermax      10 20 30 40
-	contraction 1 2 3 4
+	contraction 10 10 10 10
 end
 
 save

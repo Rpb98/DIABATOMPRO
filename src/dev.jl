@@ -37,7 +37,7 @@ print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 # fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
-read_file("../Supplementary/SO/SO_C.inp")
+read_file("../Supplementary/N2/DIABATOM-PRO_N2.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 # include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
 include("Build_Hamiltonian_Matrix.jl")
@@ -49,6 +49,7 @@ r = LinRange(Calculation["grid"].range[1],
              Calculation["grid"].range[2],
              Calculation["grid"].npoints)  
 
+r  = collect(r)
 # if Calculation["method"].abinitio_fit == true
 #     fit_abinitio()
 # end
@@ -56,10 +57,131 @@ r = LinRange(Calculation["grid"].range[1],
 #
 ## compute vibronic energies and wavefunctions for a non-rotating molecule if
 ## the 'vibronic_solver' key is in Calculation
-if haskey(Calculation, "vibronic_solver")
-    #
-    contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
+# if haskey(Calculation, "vibronic_solver")
+#     #
+#     @time contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
+# end
+
+
+
+function serialise_electronic_vib_indices(state, v_idx, contraction_array)
+    return ( state - 1 ) * contraction_array[ state ] + v_idx
 end
+#
+vmax = Calculation["vibronic_solver"].contraction
+contracted_vibronic_dim = sum(vmax)
+#
+T = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+V = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+
+#
+states = collect(keys(Potential))
+#
+Nstates = length( Calculation["method"].states )
+#
+## initialise the NAC squared matrix: second DDR
+W2 = zeros(Float64, length(r), Nstates, Nstates)
+K = map(idx -> NACMat[idx,:,:] * NACMat[idx,:,:], collect(1:lastindex(r)))
+for i=1:Nstates
+    for j=i:Nstates
+        W2[:,i,j] .= [K[idx][i,j] for idx=1:lastindex(r)]
+    end
+end
+#
+## precompute wavefunction derivatives
+wfn_ddr   = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+wfn_d2dr2 = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+#
+for i=1:Nstates
+    for v_idx=1:vmax[i]
+        #
+        state_v = serialise_electronic_vib_indices(i, v_idx, vmax)
+        #
+        wfn_ddr[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 1)
+        #
+        wfn_d2dr2[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 2)
+    end
+end
+#
+## electronically diagonal terms
+for i=1:Nstates
+    W2_ii = W2[:,i,i]
+    #
+    V_ii = PotMat[:,i,i]
+    #
+    for v_idx=1:vmax[i]
+        for v_jdx=v_idx:vmax[i]
+            #
+            row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+            column = serialise_electronic_vib_indices(i, v_jdx, vmax)
+            #
+            d2dr2 = contr_vib_wfn[i,v_idx,:] .* wfn_d2dr2[:, column]
+            #
+            W2_int = contr_vib_wfn[i,v_idx,:] .* W2_ii .* contr_vib_wfn[i,v_jdx,:]
+            #
+            integrand = d2dr2  .+ W2_int
+            #
+            matel =  simps(integrand, r[1], r[end])
+            #
+            T[row, column] = matel
+            T[column, row] = matel
+            #
+            ## now for the potential
+            V_integrand = contr_vib_wfn[i,v_idx,:] .* V_ii .* contr_vib_wfn[i,v_jdx,:]
+            V_matel = simps(V_integrand, r[1], r[end])
+            #
+            V[row, column] = V_matel
+            V[column, row] = V_matel
+        end
+    end
+end
+#
+## electronically off-diagonal terms
+for i=1:Nstates
+    for j=i+1:Nstates
+        #
+        Wij = NACMat[:,i,j]
+        #
+        for v_idx=1:vmax[i]
+            for v_jdx=1:vmax[j]
+                #
+                row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+                column = serialise_electronic_vib_indices(j, v_jdx, vmax)
+                #
+                W2_ij = contr_vib_wfn[i,v_idx,:] .* W2[:,i,j] .* contr_vib_wfn[j,v_jdx,:]
+                #
+                dyi_dr = wfn_ddr[:, row]
+                dyj_dr = wfn_ddr[:, column]
+                #
+                ddr = (dyi_dr .* Wij .* contr_vib_wfn[j,v_jdx,:]) .- (contr_vib_wfn[i,v_idx,:] .* Wij .* dyj_dr)
+                #
+                integrand = W2_ij .- ddr
+                #
+                matel = simps(integrand, r[1], r[end])
+                #
+                T[row,column] = matel
+                T[column,row] = matel
+            end
+        end
+    end
+end
+#
+H = T + V
+
+eig = eigen(H)
+
+
+# U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+
+# plt.figure()
+# for key in keys(Dipole)
+#     i, j = key
+#     #
+#     plt.plot(r,Diabatic_Objects["dipole"][:,i,j])
+#     #
+#     plt.plot(r,Objects["dipole"][:,i,j],"--")
+# end
+    #
 
 
 # plt.ylim(40000,60000)

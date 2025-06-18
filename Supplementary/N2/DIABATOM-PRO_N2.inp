@@ -13,7 +13,11 @@ method
 	grid_resolution 0.0001
 	r_boundary_condition 0 0 -1 1 0 0 0 -1 0
 	abinitio_fit false
-	solve_vibronic false
+end
+
+vibronic_solver
+	enermax      1e100 1e100 1e100
+	contraction 100 100 100 	
 end
 
 save
