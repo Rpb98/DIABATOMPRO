@@ -319,7 +319,116 @@ end
     return ( state_v - 1 ) * rot_dims[ state ] + rot_idx 
 end
 #
-ex#
+function build_coupled_vibronic_Hamiltonian() #:: TYPE DECLARE NEEDED
+    #
+    ## initialise contracted vibronic basis size
+    vmax = Calculation["vibronic_solver"].contraction
+    contracted_vibronic_dim = sum(vmax)
+    #
+    ## initialise the kinetic energy and electronic Hamiltonians
+    T = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+    V = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+    B = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+    #
+    ## initialise the number of electronic states
+    Nstates = length( Calculation["method"].states )
+    #
+    ## initialise the NAC squared matrix: second DDR
+    W2 = zeros(Float64, length(r), Nstates, Nstates)
+    K = map(idx -> NACMat[idx,:,:] * NACMat[idx,:,:], collect(1:lastindex(r)))
+    for i=1:Nstates
+        for j=i:Nstates
+            W2[:,i,j] .= [K[idx][i,j] for idx=1:lastindex(r)]
+        end
+    end
+    #
+    ## precompute wavefunction derivatives
+    wfn_ddr   = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+    wfn_d2dr2 = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+    #
+    for i=1:Nstates
+        for v_idx=1:vmax[i]
+            #
+            state_v = serialise_electronic_vib_indices(i, v_idx, vmax)
+            #
+            wfn_ddr[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 1)
+            #
+            wfn_d2dr2[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 2)
+        end
+    end
+    #
+    ## electronically diagonal terms
+    for i=1:Nstates
+        W2_ii = W2[:,i,i]
+        #
+        V_ii = PotMat[:,i,i]
+        #
+        for v_idx=1:vmax[i]
+            for v_jdx=v_idx:vmax[i]
+                #
+                row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+                column = serialise_electronic_vib_indices(i, v_jdx, vmax)
+                #
+                ## kinetic energy
+                d2dr2 = contr_vib_wfn[i,v_idx,:] .* wfn_d2dr2[:, column]
+                #
+                W2_int = contr_vib_wfn[i,v_idx,:] .* W2_ii .* contr_vib_wfn[i,v_jdx,:]
+                #
+                integrand = d2dr2  .+ W2_int
+                #
+                matel =  simps(integrand, r[1], r[end])
+                #
+                T[row, column] = matel
+                T[column, row] = matel
+                #
+                ## now for the potential
+                V_integrand = contr_vib_wfn[i,v_idx,:] .* V_ii .* contr_vib_wfn[i,v_jdx,:]
+                V_matel = simps(V_integrand, r[1], r[end])
+                #
+                V[row, column] = V_matel
+                V[column, row] = V_matel
+                #
+                ## now for the rotational constant
+                B_matel = simps(contr_vib_wfn[i,v_idx,:] .* r.^(-2) .* contr_vib_wfn[i,v_jdx,:],  r[1], r[end])
+                B[row, column] = B_matel
+                B[column, row] = B_matel
+            end
+        end
+    end
+    #
+    ## electronically off-diagonal terms
+    for i=1:Nstates
+        for j=i+1:Nstates
+            #
+            Wij = NACMat[:,i,j]
+            #
+            for v_idx=1:vmax[i]
+                for v_jdx=1:vmax[j]
+                    #
+                    row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+                    column = serialise_electronic_vib_indices(j, v_jdx, vmax)
+                    #
+                    W2_ij = contr_vib_wfn[i,v_idx,:] .* W2[:,i,j] .* contr_vib_wfn[j,v_jdx,:]
+                    #
+                    dyi_dr = wfn_ddr[:, row]
+                    dyj_dr = wfn_ddr[:, column]
+                    #
+                    ddr = (dyi_dr .* Wij .* contr_vib_wfn[j,v_jdx,:]) .- (contr_vib_wfn[i,v_idx,:] .* Wij .* dyj_dr)
+                    #
+                    integrand = W2_ij .- ddr
+                    #
+                    matel = simps(integrand, r[1], r[end])
+                    #
+                    T[row,column] = matel
+                    T[column,row] = matel
+                end
+            end
+        end
+    end
+    #
+    return T, V, B
+end
+#
 function check_omega_condition(J::Float64, Omega::Float64, Lambda::Float64, S::Float64)::Bool
     """
     Checks if the given Omega value satisfies the rovibronic selection rule:

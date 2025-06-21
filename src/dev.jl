@@ -64,11 +64,11 @@ r  = collect(r)
 # end
 
 J = 0.0
-# @time contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
+@time contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
 
 @time T, V, B = build_coupled_vibronic_Hamiltonian()
 
-@time Hrot_list = build_rotational_subBlocks(J)
+@profile Hrot_list = build_rotational_subBlocks(J)
 
 @time Hrot, spin_rot_dims, tot_rovibronic_dim = build_Hrot(B, Hrot_list)
 
