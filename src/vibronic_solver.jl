@@ -195,111 +195,357 @@ end
 #                      -->            <--        -->
 ## T = -hbar^2/2mu * (d2/dr2 + W^2 - (d/dr W - W d/dr)))
 #
-function Built_nonadiabatic_T_V() #:: TYPE DECLARE NEEDED
+# function Build_nonadiabatic_T_V() #:: TYPE DECLARE NEEDED
+#     #
+#     ## flatten multidimensional electronic+vibrational indexing
+#     function serialise_electronic_vib_indices(state, v_idx, contraction_array)
+#         return ( state - 1 ) * contraction_array[ state ] + v_idx
+#     end
+#     #
+#     ## initialise contracted vibronic basis size
+#     vmax = Calculation["vibronic_solver"].contraction
+#     contracted_vibronic_dim = sum(vmax)
+#     #
+#     ## initialise the kinetic energy and electronic Hamiltonians
+#     T = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+#     V = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+#     #
+#     ## initialise the number of electronic states
+#     Nstates = length( Calculation["method"].states )
+#     #
+#     ## initialise the NAC squared matrix: second DDR
+#     W2 = zeros(Float64, length(r), Nstates, Nstates)
+#     K = map(idx -> NACMat[idx,:,:] * NACMat[idx,:,:], collect(1:lastindex(r)))
+#     for i=1:Nstates
+#         for j=i:Nstates
+#             W2[:,i,j] .= [K[idx][i,j] for idx=1:lastindex(r)]
+#         end
+#     end
+#     #
+#     ## precompute wavefunction derivatives
+#     wfn_ddr   = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+#     wfn_d2dr2 = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
+#     #
+#     for i=1:Nstates
+#         for v_idx=1:vmax[i]
+#             #
+#             state_v = serialise_electronic_vib_indices(i, v_idx, vmax)
+#             #
+#             wfn_ddr[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 1)
+#             #
+#             wfn_d2dr2[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 2)
+#         end
+#     end
+#     #
+#     ## electronically diagonal terms
+#     for i=1:Nstates
+#         W2_ii = W2[:,i,i]
+#         #
+#         V_ii = PotMat[:,i,i]
+#         #
+#         for v_idx=1:vmax[i]
+#             for v_jdx=v_idx:vmax[i]
+#                 #
+#                 row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+#                 column = serialise_electronic_vib_indices(i, v_jdx, vmax)
+#                 #
+#                 d2dr2 = contr_vib_wfn[i,v_idx,:] .* wfn_d2dr2[:, column]
+#                 #
+#                 W2_int = contr_vib_wfn[i,v_idx,:] .* W2_ii .* contr_vib_wfn[i,v_jdx,:]
+#                 #
+#                 integrand = d2dr2  .+ W2_int
+#                 #
+#                 matel =  simps(integrand, r[1], r[end])
+#                 #
+#                 T[row, column] = matel
+#                 T[column, row] = matel
+#                 #
+#                 ## now for the potential
+#                 V_integrand = contr_vib_wfn[i,v_idx,:] .* V_ii .* contr_vib_wfn[i,v_jdx,:]
+#                 V_matel = simps(V_integrand, r[1], r[end])
+#                 #
+#                 V[row, column] = V_matel
+#                 V[column, row] = V_matel
+#             end
+#         end
+#     end
+#     #
+#     ## electronically off-diagonal terms
+#     for i=1:Nstates
+#         for j=i+1:Nstates
+#             #
+#             Wij = NACMat[:,i,j]
+#             #
+#             for v_idx=1:vmax[i]
+#                 for v_jdx=1:vmax[j]
+#                     #
+#                     row    = serialise_electronic_vib_indices(i, v_idx, vmax)
+#                     column = serialise_electronic_vib_indices(j, v_jdx, vmax)
+#                     #
+#                     W2_ij = contr_vib_wfn[i,v_idx,:] .* W2[:,i,j] .* contr_vib_wfn[j,v_jdx,:]
+#                     #
+#                     dyi_dr = wfn_ddr[:, row]
+#                     dyj_dr = wfn_ddr[:, column]
+#                     #
+#                     ddr = (dyi_dr .* Wij .* contr_vib_wfn[j,v_jdx,:]) .- (contr_vib_wfn[i,v_idx,:] .* Wij .* dyj_dr)
+#                     #
+#                     integrand = W2_ij .- ddr
+#                     #
+#                     matel = simps(integrand, r[1], r[end])
+#                     #
+#                     T[row,column] = matel
+#                     T[column,row] = matel
+#                 end
+#             end
+#         end
+#     end
+#     #
+#     return T, V
+# end
+
+@inline function flatten_index(state, local_idx, contraction_array)
+    return (state - 1) * contraction_array[state] + local_idx
+end
+#
+## flatten multidimensional electronic+vibrational indexing
+@inline function serialise_electronic_vib_indices(state, v_idx, contraction_array)
+    return ( state - 1 ) * contraction_array[ state ] + v_idx
+end
+#
+## flatten multidimensional total rovibronic Hamiltonian indexing
+@inline function serialise_vibronic_rotational_indices(state, v_idx, rot_idx, contraction_array, rot_dims)
+    state_v = ( state - 1 ) * contraction_array[ state ] + v_idx
     #
-    ## flatten multidimensional electronic+vibrational indexing
-    function serialise_electronic_vib_indices(state, v_idx, contraction_array)
-        return ( state - 1 ) * contraction_array[ state ] + v_idx
+    return ( state_v - 1 ) * rot_dims[ state ] + rot_idx 
+end
+#
+ex#
+function check_omega_condition(J::Float64, Omega::Float64, Lambda::Float64, S::Float64)::Bool
+    """
+    Checks if the given Omega value satisfies the rovibronic selection rule:
+    |Omega| <= min(J, |Lambda| + S)
+
+    Arguments:
+        J: Total angular momentum quantum number.
+        Omega: Projection of total angular momentum along the internuclear axis (Lambda + Sigma).
+        Lambda: Projection of electronic orbital angular momentum along the internuclear axis.
+        S: Total electron spin angular momentum.
+
+    Returns:
+        True if the condition is met, False otherwise.
+    """
+    
+    # Calculate the right-hand side of the inequality
+    # abs() for |Omega| and |Lambda|
+    # min() for the minimum of J and (|Lambda| + S)
+    rhs = min(J, abs(Lambda) + S)
+    
+    # Check the condition
+    return abs(Omega) <= rhs
+end
+#
+function generate_allowed_AM_values(state::Int64, J::Float64)
+    S = (Potential[state].mult - 1)/2 # This correctly derives S from multiplicity
+    #
+    Sigma = (S == 0.0) ? [0.0] : [s for s=-S:S] # This correctly generates all valid Sigma projections for a given S
+    #
+    abs_Lambda_el = Potential[state].lambda 
+    Lambda_vals_for_state = (abs_Lambda_el == 0.0) ? [0.0] : [-abs_Lambda_el, abs_Lambda_el]
+    #
+    Sig = [] # Initialize empty lists to store *selected* values
+    #
+    Lam = [] # Initialize empty lists to store *selected* values
+    #
+    Ome = [] # Initialize empty lists to store *selected* values
+    #
+    @views for L in Lambda_vals_for_state # Iterate through the *signed* Lambda values
+        for ∑ in Sigma # Iterate through the Sigma values
+            O = L+∑    # Calculate Omega
+            # The check_omega_condition function should use the S_el (S for the current electronic state)
+            if check_omega_condition(J, O, L, S) # Corrected arguments for check_omega_condition
+                push!(Lam,L)
+                push!(Sig,∑)
+                push!(Ome,O)
+            end
+        end
     end
     #
-    ## initialise contracted vibronic basis size
-    vmax = Calculation["vibronic_solver"].contraction
-    contracted_vibronic_dim = sum(vmax)
-    #
-    ## initialise the kinetic energy and electronic Hamiltonians
-    T = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
-    V = zeros(Float64, contracted_vibronic_dim, contracted_vibronic_dim)
+    return Lam, Sig, Ome, S
+end
+#
+function build_rotational_subBlocks(J)
     #
     ## initialise the number of electronic states
     Nstates = length( Calculation["method"].states )
     #
-    ## initialise the NAC squared matrix: second DDR
-    W2 = zeros(Float64, length(r), Nstates, Nstates)
-    K = map(idx -> NACMat[idx,:,:] * NACMat[idx,:,:], collect(1:lastindex(r)))
+    ## initialise the list to hold rotational matrices
+    Hrot_list = Vector{Matrix{Float64}}()
     for i=1:Nstates
-        for j=i:Nstates
-            W2[:,i,j] .= [K[idx][i,j] for idx=1:lastindex(r)]
-        end
-    end
-    #
-    ## precompute wavefunction derivatives
-    wfn_ddr   = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
-    wfn_d2dr2 = zeros(Float64, lastindex(r), contracted_vibronic_dim) 
-    #
-    for i=1:Nstates
-        for v_idx=1:vmax[i]
-            #
-            state_v = serialise_electronic_vib_indices(i, v_idx, vmax)
-            #
-            wfn_ddr[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 1)
-            #
-            wfn_d2dr2[:, state_v] .= FiniteDifference(r, contr_vib_wfn[i,v_idx,:], 2)
-        end
-    end
-    #
-    ## electronically diagonal terms
-    for i=1:Nstates
-        W2_ii = W2[:,i,i]
         #
-        V_ii = PotMat[:,i,i]
+        Lambda, Sigma, Omega, S = generate_allowed_AM_values(i, J)
         #
-        for v_idx=1:vmax[i]
-            for v_jdx=v_idx:vmax[i]
+        ## initialise the rotational kinetic energy matrix for the given electronic state 
+        Nbasis = length(Omega)  # rotational subspace dimension for this state
+        Hrot = zeros(Float64, Nbasis, Nbasis)  # empty matrix to fill in
+        #
+        ## compute J^2
+        Jsqrd = J * (J + 1)
+        #
+        ## compute S^2
+        Ssqrd = S * (S + 1)
+        #
+        for idx in eachindex(Lambda)
+            for jdx=idx:lastindex(Lambda)
+                Lambda_i, Sigma_i, Omega_i = Lambda[idx], Sigma[idx], Omega[idx]
                 #
-                row    = serialise_electronic_vib_indices(i, v_idx, vmax)
-                column = serialise_electronic_vib_indices(i, v_jdx, vmax)
+                Lambda_j, Sigma_j, Omega_j = Lambda[jdx], Sigma[jdx], Omega[jdx]
                 #
-                d2dr2 = contr_vib_wfn[i,v_idx,:] .* wfn_d2dr2[:, column]
+                ## compute matrix elements in |J, Omega> basis
                 #
-                W2_int = contr_vib_wfn[i,v_idx,:] .* W2_ii .* contr_vib_wfn[i,v_jdx,:]
+                ## <J,Omega|Jz|J,Omega> = Omega
+                Jz = (Omega_i == Omega_j) ? Omega_i : 0.0
                 #
-                integrand = d2dr2  .+ W2_int
-                #
-                matel =  simps(integrand, r[1], r[end])
-                #
-                T[row, column] = matel
-                T[column, row] = matel
-                #
-                ## now for the potential
-                V_integrand = contr_vib_wfn[i,v_idx,:] .* V_ii .* contr_vib_wfn[i,v_jdx,:]
-                V_matel = simps(V_integrand, r[1], r[end])
-                #
-                V[row, column] = V_matel
-                V[column, row] = V_matel
-            end
-        end
-    end
-    #
-    ## electronically off-diagonal terms
-    for i=1:Nstates
-        for j=i+1:Nstates
-            #
-            Wij = NACMat[:,i,j]
-            #
-            for v_idx=1:vmax[i]
-                for v_jdx=1:vmax[j]
-                    #
-                    row    = serialise_electronic_vib_indices(i, v_idx, vmax)
-                    column = serialise_electronic_vib_indices(j, v_jdx, vmax)
-                    #
-                    W2_ij = contr_vib_wfn[i,v_idx,:] .* W2[:,i,j] .* contr_vib_wfn[j,v_jdx,:]
-                    #
-                    dyi_dr = wfn_ddr[:, row]
-                    dyj_dr = wfn_ddr[:, column]
-                    #
-                    ddr = (dyi_dr .* Wij .* contr_vib_wfn[j,v_jdx,:]) .- (contr_vib_wfn[i,v_idx,:] .* Wij .* dyj_dr)
-                    #
-                    integrand = W2_ij .- ddr
-                    #
-                    matel = simps(integrand, r[1], r[end])
-                    #
-                    T[row,column] = matel
-                    T[column,row] = matel
+                ## < J, Omega -+ 1 | J± | J, Omega > = sqrt(J(J+1) - Omega(Omega -+ 1))
+                if Omega_i == Omega_j - 1
+                    Jmp = sqrt(Jsqrd - Omega_j*(Omega_j - 1))
+                elseif Omega_i == Omega_j + 1
+                    Jmp = sqrt(Jsqrd - Omega_j*(Omega_j + 1))
+                else
+                    Jmp = 0.0
                 end
+                #
+                ## compute matrix elements in |Lambda, S, Sigma>  spin basis
+                #
+                ## <Lambda,S,∑|Sz|Lambda,S,∑> = ∑
+                Sz = (Sigma_i == Sigma_j) ? Sigma_i : 0.0
+                #
+                ## < Lambda, S, ∑ ± 1 | S± | Lambda, S, ∑ > = sqrt(S(S+1) - Sigma(Sigma ± 1))
+                if Sigma_i == Sigma_j + 1
+                    Spm = sqrt(Ssqrd - Sigma_j*(Sigma_j + 1))
+                elseif Sigma_i == Sigma_j - 1
+                    Spm = sqrt(Ssqrd - Sigma_j*(Sigma_j - 1))
+                else
+                    Spm = 0.0
+                end
+                #
+                ## populate Hrot matrix for the current electronic state
+                diagonal_matel = (Jsqrd - Jz^2) + (Ssqrd - Sz^2)
+                off_diagonal_matel = Jmp * Spm
+                #
+                matel = ((idx == jdx) ? diagonal_matel : 0.0) + off_diagonal_matel 
+                #
+                Hrot[idx,jdx] = matel
+                Hrot[jdx,idx] = matel
             end
         end
+        #
+        push!(Hrot_list, Hrot)
     end
     #
-    return T, V
+    return Hrot_list
 end
 #
+function build_Hrot(B::Matrix{Float64}, Hrot_list::Vector{Matrix{Float64}})
+    #
+    ## initialise contracted vibronic basis size
+    vmax = Calculation["vibronic_solver"].contraction
+    #
+    ## initialise rotational block sizes
+    rot_dims = [size(Hrot_list[i], 1) for i in 1:length(Hrot_list)]
+    #
+    ## initialise total rovibronic Hamiltonian dimension
+    tot_rovibronic_dim = sum([vmax[state]*rot_dims[state] for state=1:lastindex(vmax)])
+    #
+    ## initialise rovibronic Hamiltonian
+    Hrot = zeros(Float64, tot_rovibronic_dim, tot_rovibronic_dim)
+    #
+    ##
+    Nstates = length( Calculation["method"].states )
+    for state=1:Nstates
+        #
+        ## prepare vibrational block of <1/r^2>
+        i = serialise_electronic_vib_indices(state, 1, vmax)
+        j = serialise_electronic_vib_indices(state, vmax[state], vmax)
+        #
+        ## extract <state, v| B | state'', v''> block
+        B_state = B[i:j, i:j]
+        #
+        ## tensor product the B_block with the rotational hamiltonian in the rot basis
+        Hrot_state_block = kron(B_state, Hrot_list[state])
+        #
+        ## compute the final rovibronic index
+        start_idx = serialise_vibronic_rotational_indices(state, 1, 1, vmax, rot_dims)
+        end_idx   = serialise_vibronic_rotational_indices(state, vmax[state], rot_dims[state], vmax, rot_dims)
+        #
+        ## populate the rovibronic hamiltonian in the full basis
+        Hrot[start_idx:end_idx, start_idx:end_idx] = Hrot_state_block
+    end
+    #
+    return Hrot, rot_dims, tot_rovibronic_dim
+end
+#
+function build_Hvibronic_embedding(T::Matrix{Float64}, V::Matrix{Float64}, spin_rot_dims::Vector{Int64}, tot_rovibronic_dim::Int64)::Matrix{Float64}
+    #
+    ## extract block from T + V
+    function extract_T_V_block!(Hvib, bra_state, ket_state, vmax, spin_rot_dims, Irot, Hrot)
+            #
+            ## prepare state vibrational block
+            bra_i = serialise_electronic_vib_indices(bra_state, 1, vmax)
+            bra_j = serialise_electronic_vib_indices(bra_state, vmax[bra_state], vmax)
+            #
+            ket_i = serialise_electronic_vib_indices(ket_state, 1, vmax)
+            ket_j = serialise_electronic_vib_indices(ket_state, vmax[ket_state], vmax)
+            #
+            ## extract <state, v| T + V | state'', v''> block
+            T_V_block = Hvib[bra_i:bra_j, ket_i:ket_j]
+            #
+            ## tensor product the T_V_block with the rotational hamiltonian in the rot basis
+            Hrovib_state_block = kron(T_V_block, Irot)
+            #
+            ## compute the final rovibronic index
+            bra_start_idx = serialise_vibronic_rotational_indices(bra_state, 1, 1, vmax, spin_rot_dims)
+            bra_end_idx   = serialise_vibronic_rotational_indices(bra_state, vmax[bra_state], spin_rot_dims[bra_state], vmax, spin_rot_dims)
+            #
+            ket_start_idx = serialise_vibronic_rotational_indices(ket_state, 1, 1, vmax, spin_rot_dims)
+            ket_end_idx   = serialise_vibronic_rotational_indices(ket_state, vmax[ket_state], spin_rot_dims[ket_state], vmax, spin_rot_dims)
+            #
+            ## populate the rovibronic hamiltonian in the full basis
+            Hrot[bra_start_idx:bra_end_idx, ket_start_idx:ket_end_idx] = Hrovib_state_block
+    end
+    #
+    ## initialise the vmax embedding
+    vmax = Calculation["vibronic_solver"].contraction
+    #
+    ## initialise total rovibronic Hamiltonian
+    Hvibronic_embedding = zeros(Float64, tot_rovibronic_dim, tot_rovibronic_dim)
+    #
+    ## initialise the total vibronic Hamiltonian
+    Hvib = T + V
+    #
+    ## prepare state vibrational block and map it to the full rovibronic Hamiltonian
+    Nstates = length( Calculation["method"].states )
+    for bra_state=1:Nstates
+        for ket_state=bra_state:Nstates
+            #
+            ## Only process if symmetry and calculation conditions are satisfied
+            if !check_symmetry_and_states(bra_state, ket_state)
+                continue
+            end
+            #
+            ## compute the spin-rotational identity
+            Irot = Matrix{Float64}(I, spin_rot_dims[bra_state], spin_rot_dims[ket_state])
+            #
+            ## upper triangle
+            extract_T_V_block!(Hvib, bra_state, ket_state, vmax, spin_rot_dims, Irot, Hvibronic_embedding) 
+            #
+            ## lower triangle
+            if bra_state ≠ ket_state
+                extract_T_V_block!(Hvib, ket_state, bra_state, vmax, spin_rot_dims, Irot, Hvibronic_embedding)
+            end
+        end
+    end
+    #
+    return Hvibronic_embedding
+end
+
+
