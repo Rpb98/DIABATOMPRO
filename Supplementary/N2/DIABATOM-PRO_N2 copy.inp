@@ -30,8 +30,8 @@ end
 poten 1
 name (1)^1Sigma+
 symmetry +
-lambda 0
-mult 1
+lambda 1
+mult 3
 type grid
 units bohr cm-1
 values
@@ -1125,8 +1125,8 @@ end
 poten 2
 name (2)^1Sigma+
 symmetry +
-lambda 0
-mult 1
+lambda 1
+mult 3
 type grid
 units bohr cm-1
 values
@@ -2205,8 +2205,8 @@ end
 poten 3
 name (3)^1Sigma+
 symmetry +
-lambda 0
-mult 1
+lambda 1
+mult 3
 type grid
 units bohr cm-1
 values
@@ -3279,9 +3279,9 @@ end
 
 NAC 1 2
 name <1|d/dr|2>
-spin 0.0 0.0
+spin 1.0 1.0
 sigma 0.0 0.0
-lambda 0 0
+lambda 1 1
 type lorentzian
 factor 1.0
 values 
@@ -3293,9 +3293,9 @@ end
 
 NAC 1 3
 name <1|d/dr|3>
-spin 0.0 0.0
+spin 1.0 1.0
 sigma 0.0 0.0
-lambda 0 0
+lambda 1 1
 type mix_perturbed
 sub-types lorentzian gaussian lorentzian
 factor 1.0
@@ -3318,9 +3318,9 @@ end
 
 NAC 2 3
 name <2|d/dr|3>
-spin 0.0 0.0
+spin 1.0 1.0
 sigma 0.0 0.0
-lambda 0 0
+lambda 1 1
 type mix
 sub-types lorentzian gaussian
 factor 1.0

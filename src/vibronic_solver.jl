@@ -335,10 +335,13 @@ function build_coupled_vibronic_Hamiltonian() #:: TYPE DECLARE NEEDED
     #
     ## initialise the NAC squared matrix: second DDR
     W2 = zeros(Float64, length(r), Nstates, Nstates)
-    K = map(idx -> NACMat[idx,:,:] * NACMat[idx,:,:], collect(1:lastindex(r)))
-    for i=1:Nstates
-        for j=i:Nstates
-            W2[:,i,j] .= [K[idx][i,j] for idx=1:lastindex(r)]
+    @views for idx in 1:lastindex(r)
+        A = NACMat[idx, :, :]  # avoids copying
+        Wsqrd = A * A                     # full matrix multiplication
+        for i in 1:Nstates
+            for j in i:Nstates
+                W2[idx, i, j] = Wsqrd[i, j]
+            end
         end
     end
     #
@@ -363,7 +366,7 @@ function build_coupled_vibronic_Hamiltonian() #:: TYPE DECLARE NEEDED
         #
         V_ii = PotMat[:,i,i]
         #
-        for v_idx=1:vmax[i]
+        @views for v_idx=1:vmax[i]
             for v_jdx=v_idx:vmax[i]
                 #
                 row    = serialise_electronic_vib_indices(i, v_idx, vmax)
@@ -426,7 +429,9 @@ function build_coupled_vibronic_Hamiltonian() #:: TYPE DECLARE NEEDED
         end
     end
     #
-    return T, V, B
+    ##
+    kefac = -KE_factor(Calculation["method"].atoms...)
+    return T * kefac, V, B
 end
 #
 function check_omega_condition(J::Float64, Omega::Float64, Lambda::Float64, S::Float64)::Bool
@@ -554,6 +559,270 @@ function build_rotational_subBlocks(J)
     return Hrot_list
 end
 #
+function generate_allowed_AM_values_2(state::Int64, J::Float64)
+    S = (Potential[state].mult - 1)/2 # This correctly derives S from multiplicity
+    #
+    Sigma = (S == 0.0) ? [0.0] : [s for s=-S:S] # This correctly generates all valid Sigma projections for a given S
+    #
+    L = abs(Potential[state].lambda)
+    #
+    ## compute inversion QN
+    if (L == 0)&(Potential[state].symmetry == "-")
+        inv=1
+    else
+        inv=0
+    end
+    #
+    Sig = [] # Initialize empty lists to store Sigma values
+    #
+    Lam = [] # Initialize empty lists to store Lambda values
+    #
+    Ome = [] # Initialize empty lists to store Omega values
+    #
+    phase = [] # Initialize empty lists to store phase values
+    #
+    @views for ∑ in Sigma # Iterate through the Sigma values
+        O = L+∑           # Calculate Omega
+        # The check_omega_condition function should use the S_el (S for the current electronic state)
+        if check_omega_condition(J, O, L, S) # Corrected arguments for check_omega_condition
+            #
+            ## Compute ε phase
+            exponent = Int(round(inv - L + S - ∑ + J - O))
+            ε = (-1)^exponent
+            #
+            push!(Lam,L)
+            push!(Sig,∑)
+            push!(Ome,O)
+            push!(phase,ε)
+        end
+    end
+    #
+    return Lam, Sig, Ome, S, phase
+end
+#
+function build_rotational_parity_subBlocks(J, Tau)
+    #
+    ## initialise the number of electronic states
+    Nstates = length( Calculation["method"].states )
+    #
+    ## initialise the list to hold rotational matrices
+    Hrot_list = Vector{Matrix{Float64}}()
+    for i=1:Nstates
+        #
+        Lambda, Sigma, Omega, S, phases = generate_allowed_AM_values_2(i, J)
+        #
+        ## initialise the rotational kinetic energy matrix for the given electronic state 
+        Nbasis = length(Omega)  # rotational subspace dimension for this state
+        Hrot = zeros(Float64, Nbasis, Nbasis)  # empty matrix to fill in
+        #
+        ## compute J^2
+        Jsqrd = J * (J + 1)
+        #
+        ## compute S^2
+        Ssqrd = S * (S + 1)
+        #
+        ## check if it is a singlet sigma + state
+        # ...
+        #
+        ## compute rot matrix elements
+        for idx in eachindex(Lambda)
+            for jdx=idx:lastindex(Lambda) 
+                Lambda_i, Sigma_i, Omega_i, phase_i = Lambda[idx], Sigma[idx], Omega[idx], phases[idx]
+                Lambda_j, Sigma_j, Omega_j, phase_j = Lambda[jdx], Sigma[jdx], Omega[jdx], phases[jdx]
+                #
+                ## compute matrix elements in |Lambda, S, Sigma>  spin basis
+                #
+                ## <Lambda,S,∑|Sz^2|Lambda,S,∑> = ∑^2
+                Sz2 = 0.0 #(Sigma_i == Sigma_j) ? Sigma_i^2 : 0.0
+                #
+                if Sigma_i == Sigma_j
+                    Sz2 += Sigma_i^2
+                elseif -Sigma_i == Sigma_j
+                    Sz2 += Tau * Sigma_i^2
+                end
+                #
+                ## compute matrix elements in |J, Omega> basis
+                #
+                ## <J,Omega|Jz|J,Omega> = Omega = 0 due to symmeterisation
+                Jz2 = (Omega_i == Omega_j) ? Omega_i^2 : 0.0
+                #
+                ## compute spin-uncoupling ladder operators
+                #
+                ## < Lambda, S, ∑ ± 1 | S± | Lambda, S, ∑ > = sqrt(S(S+1) - Sigma(Sigma ± 1))
+                Sm = 0.0
+                Sp = 0.0
+                #
+                ## < J, Omega -+ 1 | J± | J, Omega > = sqrt(J(J+1) - Omega(Omega -+ 1))
+                Jm = 0.0
+                Jp = 0.0
+                #
+                JmSp = 0.0
+                JpSm = 0.0
+                #
+                ## compute J+S-
+                println(Omega_i," ",Omega_j)
+                if (Omega_i == Omega_j - 1)&(Sigma_i == Sigma_j - 1)
+                    Jp += 0.5 * sqrt(Jsqrd - Omega_j*(Omega_j - 1))
+                    Sm += 0.5 * sqrt(Ssqrd - Sigma_j*(Sigma_j - 1))
+                    #
+                    JpSm += Jp * Sm
+                end
+                #
+                if (Omega_i == -Omega_j - 1)&(Sigma_i == -Sigma_j - 1)
+                    Jp += 0.5 * Tau * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) - 1))
+                    Sm += 0.5 * Tau * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) - 1))
+                    #
+                    JpSm += Jp * Sm
+                end
+                #
+                if (-Omega_i == Omega_j - 1)&(-Sigma_i == Sigma_j - 1)
+                    Jp += 0.5 * Tau * sqrt(Jsqrd - (Omega_j)*((Omega_j) - 1))
+                    Sm += 0.5 * Tau * sqrt(Ssqrd - (Sigma_j)*((Sigma_j) - 1))
+                    #
+                    JpSm += Jp * Sm
+                end
+                #
+                if (-Omega_i == -Omega_j - 1)&(-Sigma_i == -Sigma_j - 1)
+                    Jp += 0.5 * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) - 1))
+                    Sm += 0.5 * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) - 1))
+                    #
+                    JpSm += Jp * Sm
+                end
+                #
+                ## compute J-S+
+                if (Omega_i == Omega_j + 1)&(Sigma_i == Sigma_j + 1)
+                    Jm += 0.5 * sqrt(Jsqrd - Omega_j*(Omega_j + 1))
+                    Sp += 0.5 * sqrt(Ssqrd - Sigma_j*(Sigma_j + 1))
+                    #
+                    JmSp += Jm * Sp
+                end
+                #
+                if (Omega_i == -Omega_j + 1)&(Sigma_i == -Sigma_j + 1)
+                    Jm += 0.5 * Tau * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) + 1))
+                    Sp += 0.5 * Tau * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) + 1))
+                    #
+                    JmSp += Jm * Sp
+                end
+                #
+                if (-Omega_i == Omega_j + 1)&(-Sigma_i == Sigma_j + 1)
+                    Jm += 0.5 * Tau * sqrt(Jsqrd - (Omega_j)*((Omega_j) + 1))
+                    Sp += 0.5 * Tau * sqrt(Ssqrd - (Sigma_j)*((Sigma_j) + 1))
+                    #
+                    JmSp += Jm * Sp
+                end
+                #
+                if (-Omega_i == -Omega_j + 1)&(-Sigma_i == -Sigma_j + 1)
+                    Jm += 0.5 * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) + 1))
+                    Sp += 0.5 * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) + 1))
+                    #
+                    JmSp += Jm * Sp
+                end                
+                # #
+                # ## < J, Omega -+ 1 | J± | J, Omega > = sqrt(J(J+1) - Omega(Omega -+ 1))
+                # Jm = 0.0
+                # Jp = 0.0
+                # #
+                # ## hardcode elements : J+
+                # println(Omega_i," ",Omega_j)
+                # if Omega_i == Omega_j - 1
+                #     Jp += 0.5 * sqrt(Jsqrd - Omega_j*(Omega_j - 1))
+                # end
+                # # println(Omega_i == Omega_j - 1, " ",Jp," ",0.5 * Tau * sqrt(Jsqrd - (Omega_j)*((Omega_j) - 1)))
+                # println(Jp)
+                # #
+                # if -Omega_i == Omega_j - 1
+                #     Jp += 0.5 * Tau * sqrt(Jsqrd - Omega_j*(Omega_j - 1))
+                # end
+                # println(Jp)
+                # #
+                # if Omega_i == -Omega_j - 1
+                #     Jp += 0.5 * Tau * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) - 1))
+                # end
+                # println(Jp)
+                # #
+                # if -Omega_i == -Omega_j - 1
+                #     Jp += 0.5  * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) - 1))
+                # end
+                # println(Jp)
+                # #
+                # ## hardcode elements : J-
+                # if Omega_i == Omega_j + 1
+                #     Jm += 0.5 * sqrt(Jsqrd - Omega_j*(Omega_j + 1))
+                # end
+                # #
+                # if -Omega_i == Omega_j + 1
+                #     Jm += 0.5 * Tau * sqrt(Jsqrd - Omega_j*(Omega_j + 1))
+                # end
+                # #
+                # if Omega_i == -Omega_j + 1
+                #     Jm += 0.5 * Tau * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) + 1))
+                # end
+                # #
+                # if -Omega_i == -Omega_j + 1
+                #     Jm += 0.5 * sqrt(Jsqrd - (-Omega_j)*((-Omega_j) + 1))
+                # end
+                # #
+                # println("Jp = ",Jp, " Jm = ",Jm)
+                # #
+                # ## < Lambda, S, ∑ ± 1 | S± | Lambda, S, ∑ > = sqrt(S(S+1) - Sigma(Sigma ± 1))
+                # Sm = 0.0
+                # Sp = 0.0
+                # #
+                # ## hardcode elements : S+
+                # if Sigma_i == Sigma_j + 1
+                #     Sp += 0.5 * sqrt(Ssqrd - Sigma_j*(Sigma_j + 1))
+                # end
+                # #
+                # if -Sigma_i == Sigma_j + 1
+                #     Sp += 0.5 * Tau * sqrt(Ssqrd - Sigma_j*(Sigma_j + 1))
+                # end
+                # #
+                # if Sigma_i == -Sigma_j + 1
+                #     Sp += 0.5 * Tau * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) + 1))
+                # end
+                # #
+                # if -Sigma_i == -Sigma_j + 1
+                #     Sp += 0.5 * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) + 1))
+                # end
+                # #
+                # ## hardcode elements : S-
+                # if Sigma_i == Sigma_j - 1
+                #     Sm += 0.5 * sqrt(Ssqrd - Sigma_j*(Sigma_j - 1))
+                # end
+                # #
+                # if -Sigma_i == Sigma_j - 1
+                #     Sm += 0.5 * Tau * sqrt(Ssqrd - Sigma_j*(Sigma_j - 1))
+                # end
+                # #
+                # if Sigma_i == -Sigma_j - 1
+                #     Sm += 0.5 * Tau * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) - 1))
+                # end
+                # #
+                # if -Sigma_i == -Sigma_j - 1
+                #     Sm += 0.5 * sqrt(Ssqrd - (-Sigma_j)*((-Sigma_j) - 1))
+                # end
+                #
+                ## Hrot = (J^2 - Jz) + (S^2 -Sz) - (J+S- +J-S+) + O(L)
+                #
+                ## populate Hrot matrix for the current electronic state
+                diagonal_matel = (Jsqrd - Jz2) + (Ssqrd - Sz2)
+                off_diagonal_matel = - (JpSm + JmSp)
+                println(off_diagonal_matel)
+                println()
+                #
+                matel = ((idx == jdx) ? diagonal_matel : 0.0) + off_diagonal_matel 
+                #
+                Hrot[idx,jdx] = matel
+                Hrot[jdx,idx] = matel
+            end
+        end
+        #
+        push!(Hrot_list, Hrot)
+    end
+    #
+    return Hrot_list
+end
+#
 function build_Hrot(B::Matrix{Float64}, Hrot_list::Vector{Matrix{Float64}})
     #
     ## initialise contracted vibronic basis size
@@ -590,7 +859,9 @@ function build_Hrot(B::Matrix{Float64}, Hrot_list::Vector{Matrix{Float64}})
         Hrot[start_idx:end_idx, start_idx:end_idx] = Hrot_state_block
     end
     #
-    return Hrot, rot_dims, tot_rovibronic_dim
+    ##
+    kefac = KE_factor(Calculation["method"].atoms...)
+    return  Hrot * kefac, rot_dims, tot_rovibronic_dim
 end
 #
 function build_Hvibronic_embedding(T::Matrix{Float64}, V::Matrix{Float64}, spin_rot_dims::Vector{Int64}, tot_rovibronic_dim::Int64)::Matrix{Float64}
@@ -656,5 +927,181 @@ function build_Hvibronic_embedding(T::Matrix{Float64}, V::Matrix{Float64}, spin_
     #
     return Hvibronic_embedding
 end
+#
+function quantum_number_bookkeeping(J::Float64, Tau::Int)::Tuple{Dict{Int64, Vector{Number}},Dict{String , Int}}
+    #
+    ## electronic states
+    el_states = Calculation["method"].states
+    #
+    ## vibrational index's
+    vmax = Calculation["vibronic_solver"].contraction
+    #
+    ## spin-rotational
+    spin_rot_quanta = [generate_allowed_AM_values_2(state, J) for state in el_states]
+    spin_rot_dims = [length(s[1]) for s in spin_rot_quanta]
+    #
+    ## initialise bookkeeping dictionary
+    QN_book = Dict()
+    #
+    ##
+    for state in el_states
+        #
+        Lambda, Sigma, Omega, S, phase = spin_rot_quanta[state]
+        #
+        for v_idx=1:vmax[state]
+            #
+            for rot_idx=1:spin_rot_dims[state]
+                global_index = serialise_vibronic_rotational_indices(state, v_idx, rot_idx, vmax, spin_rot_dims)
+                #
+                QN_book[global_index] = [state,
+                                         v_idx-1,
+                                         Lambda[rot_idx],
+                                         Sigma[rot_idx],
+                                         J,
+                                         Omega[rot_idx],
+                                         Tau]
+            end
+        end
+    end
+    #
+    ## create dictionary for QN positions in array
+    quantum_number_map = Dict("state"=>1,
+                  "v"=>2,
+                  "Lambda"=>3,
+                  "Sigma"=>4,
+                  "J"=>5,
+                  "Omega"=>6,
+                  "Parity"=>7)
+    #
+    return QN_book, quantum_number_map
+end
+
+#
+function quantum_number_bookkeeping_old(J::Float64)::Tuple{Dict{Int64, Vector{Number}},Dict{String , Int64}}
+    #
+    ## electronic states
+    el_states = Calculation["method"].states
+    #
+    ## vibrational index's
+    vmax = Calculation["vibronic_solver"].contraction
+    #
+    ## spin-rotational
+    spin_rot_quanta = [generate_allowed_AM_values(state, J) for state in el_states]
+    spin_rot_dims = [length(s[1]) for s in spin_rot_quanta]
+    #
+    ## initialise bookkeeping dictionary
+    QN_book = Dict()
+    #
+    ##
+    for state in el_states
+        #
+        Lambda, Sigma, Omega, S = spin_rot_quanta[state]
+        #
+        S = (Potential[state].mult - 1)/2
+        #
+        for v_idx=1:vmax[state]
+            #
+            for rot_idx=1:spin_rot_dims[state]
+                global_index = serialise_vibronic_rotational_indices(state, v_idx, rot_idx, vmax, spin_rot_dims)
+                #
+                QN_book[global_index] = [state,
+                                         v_idx-1,
+                                         Lambda[rot_idx],
+                                         Sigma[rot_idx],
+                                         J,
+                                         Omega[rot_idx]]
+            end
+        end
+    end
+    #
+    ## create dictionary for QN positions in array
+    quantum_number_map = Dict("state"=>1,
+                  "v"=>2,
+                  "Lambda"=>3,
+                  "Sigma"=>4,
+                  "J"=>5,
+                  "Omega"=>6)
+    #
+    return QN_book, quantum_number_map
+end
 
 
+# function build_rotational_subBlocks(J)
+#     #
+#     ## initialise the number of electronic states
+#     Nstates = length( Calculation["method"].states )
+#     #
+#     ## initialise the list to hold rotational matrices
+#     Hrot_list = Vector{Matrix{Float64}}()
+#     for i=1:Nstates
+#         for j=i:Nstates
+#             #
+#             iLambda, iSigma, iOmega, iS = generate_allowed_AM_values(i, J)
+#             jLambda, jSigma, jOmega, jS = generate_allowed_AM_values(i, J)
+#             #
+#             ## initialise the rotational kinetic energy matrix for the given electronic state 
+#             Nbasis_i = length(iOmega)  # rotational subspace dimension for this state
+#             Nbasis_j = length(jOmega)  # rotational subspace dimension for this state
+#             #
+#             Hrot = zeros(Float64, Nbasis_i, Nbasis_j)  # empty matrix to fill in
+#             #
+#             ## if spin-rotationally diagonal
+#             if (iLambda, iSigma)
+#             #
+#             ## compute J^2
+#             Jsqrd = J * (J + 1)
+#             #
+#             ## compute S^2
+#             Ssqrd = S * (S + 1)
+#             #
+#             for idx in eachindex(Lambda)
+#                 for jdx=idx:lastindex(Lambda)
+#                     Lambda_i, Sigma_i, Omega_i = Lambda[idx], Sigma[idx], Omega[idx]
+#                     #
+#                     Lambda_j, Sigma_j, Omega_j = Lambda[jdx], Sigma[jdx], Omega[jdx]
+#                     #
+#                     ## compute matrix elements in |J, Omega> basis
+#                     #
+#                     ## <J,Omega|Jz|J,Omega> = Omega
+#                     Jz = (Omega_i == Omega_j) ? Omega_i : 0.0
+#                     #
+#                     ## < J, Omega -+ 1 | J± | J, Omega > = sqrt(J(J+1) - Omega(Omega -+ 1))
+#                     if Omega_i == Omega_j - 1
+#                         Jmp = sqrt(Jsqrd - Omega_j*(Omega_j - 1))
+#                     elseif Omega_i == Omega_j + 1
+#                         Jmp = sqrt(Jsqrd - Omega_j*(Omega_j + 1))
+#                     else
+#                         Jmp = 0.0
+#                     end
+#                     #
+#                     ## compute matrix elements in |Lambda, S, Sigma>  spin basis
+#                     #
+#                     ## <Lambda,S,∑|Sz|Lambda,S,∑> = ∑
+#                     Sz = (Sigma_i == Sigma_j) ? Sigma_i : 0.0
+#                     #
+#                     ## < Lambda, S, ∑ ± 1 | S± | Lambda, S, ∑ > = sqrt(S(S+1) - Sigma(Sigma ± 1))
+#                     if Sigma_i == Sigma_j + 1
+#                         Spm = sqrt(Ssqrd - Sigma_j*(Sigma_j + 1))
+#                     elseif Sigma_i == Sigma_j - 1
+#                         Spm = sqrt(Ssqrd - Sigma_j*(Sigma_j - 1))
+#                     else
+#                         Spm = 0.0
+#                     end
+#                     #
+#                     ## populate Hrot matrix for the current electronic state
+#                     diagonal_matel = (Jsqrd - Jz^2) + (Ssqrd - Sz^2)
+#                     off_diagonal_matel = Jmp * Spm
+#                     #
+#                     matel = ((idx == jdx) ? diagonal_matel : 0.0) + off_diagonal_matel 
+#                     #
+#                     Hrot[idx,jdx] = matel
+#                     Hrot[jdx,idx] = matel
+#                 end
+#             end
+#             #
+#             push!(Hrot_list, Hrot)
+#         end
+#     end
+#     #
+#     return Hrot_list
+# end

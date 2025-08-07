@@ -37,7 +37,7 @@ print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 # fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
-read_file("../Supplementary/N2/DIABATOM-PRO_N2.inp")
+read_file("./TEST_input.inp") #../Supplementary/SO/SO_B.inp
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 # include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
 include("Build_Hamiltonian_Matrix.jl")
@@ -63,19 +63,167 @@ r  = collect(r)
 #     @time contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
 # end
 
-J = 0.0
-@time contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
+# plot_vibronic_solution(r, PotMat, [1], E_vib_contr,  contr_vib_wfn, [30])
 
-@time T, V, B = build_coupled_vibronic_Hamiltonian()
+# #
+# ## compute expectation values: Psi_v = psi[state,v_idx,:]
+# expec = []
+# for v=1:31
+#     Psi_v = contr_vib_wfn[1,v,:]
+#     #
+#     integrand = Psi_v .* r .* Psi_v
+#     #
+#     ## integrate
+#     rexpec = simps(integrand, r[1], r[end])
+#     # println(rexpec)
+#     #
+#     println("<$(v-1)|r|$(v-1)> =", rexpec)
+# end
 
-@profile Hrot_list = build_rotational_subBlocks(J)
+# diffs = [0.1,1,2.5,5,10,20,50,100]
 
-@time Hrot, spin_rot_dims, tot_rovibronic_dim = build_Hrot(B, Hrot_list)
+# regions = LinRange(0.01,80000,80000)
 
-@time Hvibronic =  build_Hvibronic_embedding(T, V, spin_rot_dims, tot_rovibronic_dim)
+# plt.figure()
+
+# for diff in diffs
+#     power = regions/diff
+#     plt.plot(regions,power,label=diff)
+# end
+# plt.yscale("log")
+
+# plt.legend()
+
+
+########################## ROVIBRONIC CODE #####################################
+
+
+# using Profile
+
+# state = 1
+# J = 2.0
+# #
+# ## generate absolute AM Hunds case (a) basis & reflection operator phases
+# Lambda, Sigma, Omega, S, phase = generate_allowed_AM_values_2(state, J)
+# #
+# for Tau in ["+","-"]
+#     for i=1:lastindex(Lambda)
+#         #
+#         ## compute symmetrised basis
+#         println("1/√2 (|$(Lambda[i]),$(Sigma[i]),$(Omega[i])> $(Tau) $(phase[i])*|$(-Lambda[i]),$(-Sigma[i]),$(-Omega[i])>)")
+#     end
+# end
+
+# Omega = -2,-1,0,0,1,2
+# Jz = [-2 0 0 0 0 0 ; 0 -1 0 0 0 0 ; 0 0 0 0 0 0; 0 0 0 0 0 0 ; 0 0 0 0 1 0 ; 0 0 0 0 0 2]
+
+# U = 1/sqrt(2) * [1 0 0 0 0 -1 ; 0 1 0 0 -1 0; 0 0 sqrt(2) 0 0 0 ; 0 0 0 sqrt(2) 0 0 ; 0 1 0 0 1 0 ; 1 0 0 0 0 1]
+
+# Jz_trans = U * Jz * U'
 
 
 
+function generate_symmetrized_AM_basis(state::Int64, J::Float64)
+    #
+    ## Get raw Hunds case (a) basis
+    Lambda, Sigma, Omega, S = generate_allowed_AM_values(state, J)
+    #
+    ## compute inversion QN
+    if (Lambda == 0)&(Potential[state].symmetry == "-")
+        s=1
+    else
+        s=0
+    end
+    #
+    N = length(Lambda)
+    used = falses(N)
+    #
+    sym_basis = []
+    #
+    for i in 1:N
+        if used[i]
+            continue
+        end
+        # Look for parity partner j
+        for j in (i+1):N
+            if !used[j] &&
+                isapprox(Lambda[i] + Lambda[j], 0.0) &&
+                isapprox(Sigma[i] + Sigma[j], 0.0) &&
+                isapprox(Omega[i] + Omega[j], 0.0)
+                #
+                ## Compute ε phase
+                exponent = Int(round(s - Lambda[i] + S - Sigma[i] + J - Omega[i]))
+                ε = (-1)^exponent
+                #
+                #
+                ## Store ± combinations as symbolic expressions (or any structure you prefer)
+                push!(sym_basis, ("+", (Lambda[i], Sigma[i], Omega[i]), (Lambda[j], Sigma[j], Omega[j]), ε))
+                push!(sym_basis, ("-", (Lambda[i], Sigma[i], Omega[i]), (Lambda[j], Sigma[j], Omega[j]), ε))
+                #
+                used[i] = true
+                used[j] = true
+                break
+            end
+        end
+    end
+    #
+    return sym_basis
+end
+
+
+J = 2.0
+
+
+QN_book, QN_index_map = quantum_number_bookkeeping(J,-1)
+
+
+contr_vib_wfn, E_vib_contr = vibronic_eigensolver(collect(r), PotMat, Calculation["grid"].npoints, collect(keys(Potential)), Calculation["method"].atoms...)
+
+T, V, B = build_coupled_vibronic_Hamiltonian()
+
+Hrot_list = build_rotational_parity_subBlocks(J,-1)
+
+Hrot, spin_rot_dims, tot_rovibronic_dim = build_Hrot(B, Hrot_list)
+
+Hvibronic =  build_Hvibronic_embedding(T, V, spin_rot_dims, tot_rovibronic_dim)
+
+Htot = Hvibronic + Hrot
+
+E, eigvec = eigen(Htot)
+
+ZPE = minimum(E)
+
+E = E .- ZPE
+
+#
+open("J2_test_minus_parities.eners", "w") do io
+    # println(io, "|--------------------------------------------------------------------------|")
+    println(io, "    n   J        E         state    v    S    Lambda    Sigma    Omega    Parity ")
+    # println(io, "|--------------------------------------------------------------------------|")
+    #
+    for n in 1:lastindex(E)
+        qn = QN_book[n]
+        state   = qn[QN_index_map["state"]]
+        v       = qn[QN_index_map["v"]]
+        Lambda  = qn[QN_index_map["Lambda"]]
+        Sigma   = qn[QN_index_map["Sigma"]]
+        J       = qn[QN_index_map["J"]]
+        Omega   = qn[QN_index_map["Omega"]]
+        Parity  = qn[QN_index_map["Parity"]]
+        S       = (Potential[state].mult - 1) / 2
+
+        if Parity == 1
+            Tau = "+"
+        elseif Parity == -1
+            Tau = "-"
+        end
+
+        # Tau = "X"
+
+        @printf(io, "  %3d  %2.1f  %10.6f   %5d  %3d   %2.1f   %6d   %6.1f   %6.1f   %3s  \n",
+                n, J, E[n], state, v, S, Lambda, Sigma, Omega, Tau)
+    end
+end
 
 #
 # H = T + V
@@ -130,102 +278,107 @@ J = 0.0
 # diabatom["Dipole"] = Dipole
 # diabatom["NonAdiabaticCoupling"] = NonAdiabaticCoupling
 
-# # run the diabatiser
+# run the diabatiser
 # if Calculation["method"].abinitio_fit == true
 #     fit_abinitio()
 # elseif Calculation["method"].abinitio_fit == false
 #     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
     
-#     # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+    # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
 
-#     # plt.subplots_adjust(wspace=0, hspace=0)
+    # plt.subplots_adjust(wspace=0, hspace=0)
 
-#     # # axs[1,1].set_title("MRCI aug-cc-pVQZ-X2C | occ = 8330, closed = 5110")
-#     # for i=1:dim
-#     #     if lowercase(Calculation["method"].regularisation) == "potential"
-#     #         if i in Calculation["method"].states
-#     #             axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-#     #             axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-#     #         end
-#     #     else
-#     #         for j=i:dim
-#     #             if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-#     #                 axs[1,1].plot(r,Diabatic_Objects[Calculation["method"].regularisation][:,i,j],label="F"*string(i)*string(j))
-#     #                 axs[1,1].plot(r,Objects[Calculation["method"].regularisation][:,i,j],"--")
-#     #             end
-#     #         end
-#     #     end
-#     # end
+    # # axs[1,1].set_title("MRCI aug-cc-pVQZ-X2C | occ = 8330, closed = 5110")
+    # for i=1:dim
+    #     if lowercase(Calculation["method"].regularisation) == "potential"
+    #         if i in Calculation["method"].states
+    #             axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+    #             axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+    #         end
+    #     else
+    #         for j=i:dim
+    #             if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+    #                 axs[1,1].plot(r,Diabatic_Objects[Calculation["method"].regularisation][:,i,j],label="F"*string(i)*string(j))
+    #                 axs[1,1].plot(r,Objects[Calculation["method"].regularisation][:,i,j],"--")
+    #             end
+    #         end
+    #     end
+    # end
 
-#     # # axs[1,1].plot(r,Diabatic_Objects["potential"][:,2,2], color="green",label= L"$V^{\rm (d)}_1$")
-#     # # axs[1,1].plot(r,Diabatic_Objects["potential"][:,3,3], color="orange",label=L"$V^{\rm (d)}_2$")
-#     # # axs[1,1].plot(r,Objects["potential"][:,2,2],color="red","--")
-#     # # axs[1,1].plot(r,Objects["potential"][:,3,3],color="blue","--")
+    # # axs[1,1].plot(r,Diabatic_Objects["potential"][:,2,2], color="green",label= L"$V^{\rm (d)}_1$")
+    # # axs[1,1].plot(r,Diabatic_Objects["potential"][:,3,3], color="orange",label=L"$V^{\rm (d)}_2$")
+    # # axs[1,1].plot(r,Objects["potential"][:,2,2],color="red","--")
+    # # axs[1,1].plot(r,Objects["potential"][:,3,3],color="blue","--")
 
-#     # # inset_ax = fig.add_axes([0.6, 0.6, 0.25, 0.25])  # [left, bottom, width, height]
+    # # inset_ax = fig.add_axes([0.6, 0.6, 0.25, 0.25])  # [left, bottom, width, height]
 
-#     # # inset_ax.plot(r,Diabatic_Objects["potential"][:,2,2], color="green")
-#     # # inset_ax.plot(r,Diabatic_Objects["potential"][:,3,3], color="orange")
-#     # # inset_ax.plot(r,Objects["potential"][:,2,2],color="red","--")
-#     # # inset_ax.plot(r,Objects["potential"][:,3,3],color="blue","--")
+    # # inset_ax.plot(r,Diabatic_Objects["potential"][:,2,2], color="green")
+    # # inset_ax.plot(r,Diabatic_Objects["potential"][:,3,3], color="orange")
+    # # inset_ax.plot(r,Objects["potential"][:,2,2],color="red","--")
+    # # inset_ax.plot(r,Objects["potential"][:,3,3],color="blue","--")
 
-#     # # inset_ax.set_xlim(1.8, 2.1)  # Zoom into x-range
-#     # # inset_ax.set_ylim(50000,63000)  # Zoom into y-range
+    # # inset_ax.set_xlim(1.8, 2.1)  # Zoom into x-range
+    # # inset_ax.set_ylim(50000,63000)  # Zoom into y-range
 
-#     # # axs[1,1].plot([1.8,1.8],[5e4,6.3e4], color="grey"     ,alpha=0.5)
-#     # # axs[1,1].plot([2.1,2.1],[5e4,6.3e4], color="grey"     ,alpha=0.5)
-#     # # axs[1,1].plot([1.8,2.1],[5e4,5e4], color="grey"       ,alpha=0.5)
-#     # # axs[1,1].plot([1.8,2.1],[6.3e4,6.3e4], color="grey"   ,alpha=0.5)
-#     # # axs[1,1].plot([2.1,2.668],[5e4,5e4], color="grey"     ,alpha=0.5)
-#     # # axs[1,1].plot([2.1,2.668],[6.3e4,7.09e4], color="grey",alpha=0.5)
+    # # axs[1,1].plot([1.8,1.8],[5e4,6.3e4], color="grey"     ,alpha=0.5)
+    # # axs[1,1].plot([2.1,2.1],[5e4,6.3e4], color="grey"     ,alpha=0.5)
+    # # axs[1,1].plot([1.8,2.1],[5e4,5e4], color="grey"       ,alpha=0.5)
+    # # axs[1,1].plot([1.8,2.1],[6.3e4,6.3e4], color="grey"   ,alpha=0.5)
+    # # axs[1,1].plot([2.1,2.668],[5e4,5e4], color="grey"     ,alpha=0.5)
+    # # axs[1,1].plot([2.1,2.668],[6.3e4,7.09e4], color="grey",alpha=0.5)
 
-#     # # inset_ax.set_xticklabels([])  # Remove x-axis numbers
-#     # # inset_ax.set_yticklabels([])  # Remove y-axis numbers
+    # # inset_ax.set_xticklabels([])  # Remove x-axis numbers
+    # # inset_ax.set_yticklabels([])  # Remove y-axis numbers
 
-#     # # # axs[1,1].set_xlabel("Bond Length")
-#     # # axs[1,1].set_ylabel(L"Potential Energy, $cm^{-1}$")
+    # # # axs[1,1].set_xlabel("Bond Length")
+    # # axs[1,1].set_ylabel(L"Potential Energy, $cm^{-1}$")
 
-#     # for i=1:dim
-#     #     for j=i+1:dim
-#     #         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-#     #             # axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
-#     #             axs[2,1].plot(r,Objects["nac"][:,i,j]) #,"--",alpha=0.5)
-#     #         end
-#     #     end
-#     # end
+    # for i=1:dim
+    #     for j=i+1:dim
+    #         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+    #             # axs[2,1].plot(r,Objects["regularised_nac"][:,i,j],label="<"*string(i)*"| d/dr |"*string(j)*">")
+    #             axs[2,1].plot(r,Objects["nac"][:,i,j]) #,"--",alpha=0.5)
+    #         end
+    #     end
+    # end
 
-#     # # axs[2,1].plot(r,Objects["nac"][:,2,3],"k") #,"--",alpha=0.5)
+    # # axs[2,1].plot(r,Objects["nac"][:,2,3],"k") #,"--",alpha=0.5)
 
 
-#     # axs[2,1].set_xlabel(L"Bond Length, $\rm \AA$")
-#     # axs[2,1].set_ylabel(L"NAC, $\rm \AA^{-1}$")
-#     # # plt.plot(r,Diabatic_Objects["potential"][:,3,3])
-#     # # axs[1,1].legend()
-#     # # axs[2,1].legend()
+    # axs[2,1].set_xlabel(L"Bond Length, $\rm \AA$")
+    # axs[2,1].set_ylabel(L"NAC, $\rm \AA^{-1}$")
+    # # plt.plot(r,Diabatic_Objects["potential"][:,3,3])
+    # # axs[1,1].legend()
+    # # axs[2,1].legend()
 
-#     # sf = Calculation["method"].states[end]
-#     # Emax = Objects["potential"][end,sf,sf]
+    # sf = Calculation["method"].states[end]
+    # Emax = Objects["potential"][end,sf,sf]
 
-#     # si = Calculation["method"].states[1]
-#     # Emin = minimum(Objects["potential"][:,si,si])
+    # si = Calculation["method"].states[1]
+    # Emin = minimum(Objects["potential"][:,si,si])
 
-#     # axs[1,1].set_ylim(Emin,1.1*Emax)
-#     # axs[1,1].set_xlim(1.35,3.5)
+    # axs[1,1].set_ylim(Emin,1.1*Emax)
+    # axs[1,1].set_xlim(1.35,3.5)
 
-#     # plt.savefig("/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/Thesis/AtDT_method_comp/property_based_pot_guess.png",dpi=300,bbox_inches="tight")
+    # plt.savefig("/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/Thesis/AtDT_method_comp/property_based_pot_guess.png",dpi=300,bbox_inches="tight")
 # end
+
+
+
 
 # fig, axs = plt.subplots(2,2,sharex=true,figsize=[5,3])
 # plt.subplots_adjust(wspace=0.4, hspace=0)
 # for i=1:dim
 #     axs[1,1].plot(r,Objects["potential"][:,i,i])
+#     axs[1,2].plot(r,Objects["potential"][:,i,i],alpha=0.25)
+
 #     #
 #     axs[1,2].plot(r,Diabatic_Objects["potential"][:,i,i])
 #     #
 #     for j=i+1:dim
 #         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-#             # axs[2,1].plot(r,Objects["nac"][:,i,j], alpha=0.5)
-#             axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)])
+#             axs[2,1].plot(r,Objects["nac"][:,i,j], alpha=0.5)
+#             # axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)])
 #             axs[2,2].plot(r,Diabatic_Objects["potential"][:,i,j])
 #         end
 #     end

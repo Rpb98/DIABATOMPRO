@@ -556,6 +556,10 @@ function lorentzian(r,w,rc,amp)
     return amp*0.5*(w/((r - rc)^2 + w^2))
 end
 #
+function duo_lorentzian(r,w,rc,a0)
+    return 2*(a0/pi)*(w/(4*(r-rc)^2 + w^2))
+end
+#
 function laplace(r,b,rc)                                             # Laplacian
 	return (pi/(4*b))exp(-( (abs.(r-rc))/b ))
 end
@@ -1067,7 +1071,7 @@ function fit_abinitio()
             fitting_object = Hamiltonian[key]
             #
             x_ai = abinitio[key].Lval
-            y_ai = abinitio[key].Rval
+            y_ai = abinitio[key].Rval * abinitio[key].factor
             #
             ## make mask for fitting region
             xi = abinitio[key].fit_range[1]
