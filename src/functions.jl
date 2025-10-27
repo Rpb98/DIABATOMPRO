@@ -256,6 +256,175 @@ function FiniteDifference(x::Vector{Float64}, y::Vector{Float64}, d_order::Int64
     return dy
 end
 #
+function FiniteDifferenceSP(x::Vector{Float64}, y::Vector{Float64}, idx::Int64, d_order::Int64)::Float64
+    local dy
+    #
+    ## derivative parameters for forward and backwards differences
+    assymetrical_first_derivative_parameters = [[-1,       1],
+                                                [-1.5,     2, -0.5], 
+                                                [-11/6,    3, -3/2,  1/3],
+                                                [-25/12,   4, -3,	4/3,  -0.25],
+                                                [-137/60,  5, -5,    10/3, -5/4,1 /5],
+                                                [-49/20,   6, -15/2, 20/3, -15/4, 6/5,  -1/6],
+                                                [-363/140, 7, -21/2, 35/3, -35/4, 21/5, -7/6,  1/7],
+                                                [-761/280, 8, -14,   56/3, -35/2, 56/5, -14/3, 8/7, -1/8]]
+    assymetrical_second_derivative_parameters = [[1,          -2,      1],	 	 	 	 	 	 
+                                                 [2,          -5,      4,      -1],	 	 	 	 	 
+                                                 [35/12,      -26/3,   19/2,   -14/3,    11/12], 	 	 	 
+                                                 [15/4,       -77/6,   107/6,  -13,      61/12, -5/6],	 	 	 
+                                                 [203/45,     -87/5,   117/4,  -254/9,   33/2,  -27/5,   137/180],	 	 
+                                                 [469/90,     -223/10, 879/20, -949/18,  41,    -201/10, 1019/180, -7/10],
+                                                 [29531/5040, -962/35, 621/10, -4006/45, 691/8, -282/5,  2143/90,  -206/35, 363/560]]
+    assymetrical_third_derivative_parameters = [[-1,       3,      -3,         1],
+                                                [-5/2,     9,      -12,        7,       -3/2],
+                                                [-17/4,    71/4,   -59/2,      49/2,    -41/4,    7/4],
+                                                [-49/8,    29,     -461/8,     62,      -307/8,   13,      -15/8],
+                                                [-967/120, 638/15, -3929/40,   389/3,   -2545/24, 268/5,   -1849/120, 29/15],
+                                                [-801/80,  349/6,  -18353/120, 2391/10, -1457/6,  4891/30, -561/8,    527/30, -469/240]]
+    assymetrical_fourth_derivative_parameters =[[1,       -4,       6,        -4,      1]
+                                                [3,       -14,      26,       -24,     11,       -2]
+                                                [35/6,    -31,      137/2,    -242/3,  107/2,    -19,      17/6]
+                                                [28/3,    -111/2,   142,      -1219/6, 176,      -185/2,   82/3,    -7/2]
+                                                [1069/80, -1316/15, 15289/60, -2144/5, 10993/24, -4772/15, 2803/20, -536/15, 967/240]]
+    #
+    assymetrical_derivative_parameters = [assymetrical_first_derivative_parameters,
+                                          assymetrical_second_derivative_parameters,
+                                          assymetrical_third_derivative_parameters,
+                                          assymetrical_fourth_derivative_parameters]
+    #
+    ## central difference derivative parameters
+    central_first_derivative_parameters  = [[   -1/2,      0,   1/2],
+                                            [   1/12,   -2/3,	   0,  2/3,	-1/12,],
+                                            [  -1/60,   3/20,	-3/4,	 0,	  3/4, -3/20, 1/60],
+                                            [  1/280, -4/105,	 1/5, -4/5,	    0,	 4/5, -1/5,	4/105, -1/280]]
+    central_second_derivative_parameters = [[      1,     -2,	1],				
+                                            [  -1/12,    4/3,   -5/2, 4/3,	  -1/12],			
+                                            [   1/90,  -3/20,  3/2, -49/18, 3/2,	   -3/20, 1/90],		
+                                            [ -1/560,  8/315, -1/5, 8/5,	  -205/72,	8/5,  -1/5, 8/315, -1/560]]
+    central_third_derivative_parameters  = [[   -1/2,      1,    0,       -1,    1/2],			
+                                            [    1/8,     -1,    13/8,     0,     -13/8,	1,	    -1/8],		
+                                            [ -7/240,   3/10, -169/120, 61/30, 0,	    -61/30, 169/120, -3/10, 7/240]]	
+    central_fourth_derivative_parameters = [[      1,     -4,	     6,	     -4,	      1],
+	                                        [   -1/6,      2,	 -13/2,	   28/3,	  -13/2,	       2,	  -1/6],
+	                                        [  7/240,   -2/5,	169/60,	-122/15,	   91/8,	 -122/15,	169/60,	-2/5,  7/240]]
+    central_fifth_derivative_parameters  = [[   -1/2,      2,	  -5/2,	      0,	    5/2,	      -2,	   1/2],
+	                                        [    1/6,   -3/2,	  13/3,	  -29/6,	      0,	    29/6,	 -13/3,   3/2,  -1/6],
+	                                        [-13/288,  19/36,	-87/32,	   13/2,	-323/48,	       0,	323/48, -13/2, 87/32,	-19/36,	13/288]]
+    central_sixth_derivative_parameters  = [[	   1,     -6,	    15,	    -20,	     15,	      -6,	     1],	
+	                                        [   -1/4,      3,	   -13,	     29,	  -75/2,	      29,	   -13,	   3,  -1/4],	
+	                                        [ 13/240, -19/24,	 87/16,	  -39/2,	  323/8,	-1023/20,	 323/8, -39/2, 87/16,	-19/24,	13/240]]
+    #
+    central_derivative_parameters = [central_first_derivative_parameters,
+                                     central_second_derivative_parameters,
+                                     central_third_derivative_parameters,
+                                     central_fourth_derivative_parameters,
+                                     central_fifth_derivative_parameters,
+                                     central_sixth_derivative_parameters]
+    #
+    #
+    # Helper functions for the three types of finite differences (same as original code)
+    function forward_difference(f, derivative_parameters, h)
+        df = 0.0
+        for i=1:lastindex(derivative_parameters)
+            df += derivative_parameters[i] * f[i]
+        end
+        return df / h^(d_order)
+    end
+    function backward_difference(f, derivative_parameters, h)
+        df = 0.0
+        for i=1:lastindex(derivative_parameters)
+            df += (-1)^(d_order) * derivative_parameters[i] * f[end - i + 1]
+        end        
+        return df / h^(d_order)
+    end
+    function central_difference(f, derivative_parameters, h)
+        df = 0.0
+        n = Int((length(derivative_parameters)-1)/2)
+        j = 0
+        for i in -n:n
+            j += 1
+            df += derivative_parameters[j] * f[n + 1 + i]
+        end
+        return df / h^(d_order)
+    end    
+    #
+    ##
+    #
+    # Main logic to compute the derivative at a single point
+    h = mean(diff(x))
+    n = length(x)
+    
+    # Check for valid d_order
+    if d_order < 1 || d_order > length(assymetrical_derivative_parameters)
+        throw(ArgumentError("Derivative order not supported."))
+    end
+    
+    # Try Central Difference first as it is the most accurate
+    # Find the best order for central difference at this point
+    central_params = central_derivative_parameters[d_order]
+    best_central_order = 0
+    for order = 1:length(central_params)
+        half_width = div(length(central_params[order]) - 1, 2)
+        if (idx - half_width >= 1) && (idx + half_width <= n)
+            best_central_order = order
+        else
+            break
+        end
+    end
+
+    if best_central_order > 0
+
+        # Compute central difference
+        params = central_params[best_central_order]
+        half_width = div(length(params) - 1, 2)
+        y_slice = y[idx - half_width : idx + half_width]
+        return central_difference(y_slice, params, h)
+    else
+        # Fall back to forward or backward difference
+        assym_params = assymetrical_derivative_parameters[d_order]
+        
+        # Check for forward difference
+        best_forward_order = 0
+        for order = 1:length(assym_params)
+            num_points = length(assym_params[order])
+            if idx + num_points - 1 <= n
+                best_forward_order = order
+            else
+                break
+            end
+        end
+
+        if best_forward_order > 0
+            # Compute forward difference
+            params = assym_params[best_forward_order]
+            num_points = length(params)
+            y_slice = y[idx : idx + num_points - 1]
+            return forward_difference(y_slice, params, h)
+        else
+            # Must use backward difference
+            best_backward_order = 0
+            for order = 1:length(assym_params)
+                num_points = length(assym_params[order])
+                if idx - num_points + 1 >= 1
+                    best_backward_order = order
+                else
+                    break
+                end
+            end
+            
+            if best_backward_order > 0
+                # Compute backward difference
+                params = assym_params[best_backward_order]
+                num_points = length(params)
+                y_slice = y[idx - num_points + 1 : idx]
+                return backward_difference(y_slice, params, h)
+            else
+                throw(ArgumentError("Cannot compute derivative at this point with the available grid points."))
+            end
+        end
+    end
+end
+#
 ## cumulative integral
 function cumtrapz(X::T, Y::T) where {T <: AbstractVector}
     # Check matching vector length
@@ -294,6 +463,26 @@ end
 # from the function values and range
 function simps(fx::AbstractVector, a::Real, b::Real)
     return simps(fx, (b-a)/(length(fx)-1))
+end
+#
+
+#
+function is_triangular(x::Int)
+    if x < 0
+        return false
+    end
+    
+    # Calculate 1 + 8x
+    val = 1 + 8x
+
+    # Check if val is a perfect square
+    s = isqrt(val)
+    if s * s != val
+        return false
+    end
+
+    # Check if the result of N is an integer
+    return (-1 + s) % 2 == 0
 end
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRID FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -381,6 +570,18 @@ function double_sigmoid(x,y,g,x0)
     b  = s2.*z .- (s2 .- 1).*a
 
     return b
+end
+#
+function repulsive(r,params...)
+    coefficients = params
+    #
+    V = 0
+    #
+    for i=1:lastindex(coefficients)
+        V += coefficients[i]/r^(i-1)
+    end
+    #
+    return V
 end
 #
 function morse_oscillator(Ve,Ae,r,a,re) 
@@ -583,6 +784,10 @@ function lor_lap(r,w,rc)
     return sign(w)*FiniteDifference(collect(r),beta_geomavg,1)
 end
 #
+function mixAng_duo_lorentzian(r,w,rc,a0)                             # Lorentizan mixing angle
+	return (amp*pi/4)+(amp*atan((r-rc)/w)/2)
+end
+#
 function mixAng_lorentzian(r,w,rc,amp)                             # Lorentizan mixing angle
 	return (amp*pi/4)+(amp*atan((r-rc)/w)/2)
 end
@@ -632,7 +837,7 @@ function discriminant(a,b,c,d)
     return lm, lp
 end
 #
-function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
+function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np, DIMENSION; betaCouple=false, crossing = false)
     #
     ## index mapping function
     function index_map(i,j,N)
@@ -660,8 +865,7 @@ function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
         return vcat(diagonal_pairs, off_diagonal_pairs)
     end
     #
-    ## find dimension of potential matrix to diagonalise
-    DIMENSION = Int(RVAL[1])
+    RC = -1.0
     #
     ## find the component the user wishes to compute
     COMPONENT = Int(RVAL[end])
@@ -669,7 +873,7 @@ function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
     ## slice the parameter arrays according to the number of parameters in Np
     L = []
     R = []
-    i = 2
+    i = 1
     for N in Np
         f = Int(i + N - 1)
         #
@@ -693,12 +897,16 @@ function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
             V2d = V[:,j,j]
             #
             ## find crossing point
-            spl = Spline1D(r, map(i->V2d[i]-V1d[i],1:length(r)))
-            root = Dierckx.roots(spl)
-            if !isempty(root)
-                RC = root[1]
+            if crossing == false
+                spl = Spline1D(r, map(i->V2d[i]-V1d[i],1:length(r)))
+                root = Dierckx.roots(spl)
+                if !isempty(root)
+                    RC = root[1]
+                else
+                    RC = R[mu][2]
+                end
             else
-                RC = R[mu][2]
+                RC = crossing
             end
             #
             R[mu][2] = RC
@@ -728,11 +936,11 @@ function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np; betaCouple=false)
         #
         adi = [V1a, V2a]
         #
-        return adi[COMPONENT]
+        return adi[COMPONENT], RC
     else
         Va = map(x -> eigen(V[x,:,:]).values[COMPONENT], collect(1:length(r)))
         #
-        return Va
+        return Va, RC
     end
 end
 
@@ -807,7 +1015,24 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
             push!(Nparameters,  parse(Float64,n))
         end
         #
-        f = COUPLED_PEC(collect(r), self.Lval, self.Rval, subtypes, Nparameters, betaCouple = coupled_beta)
+        ## compute the dimension of the electronic matrix to diagonalise
+        Num_of_el = length(self.sub_type)
+        #
+        if !is_triangular(Num_of_el)
+            object = self.obj_type
+            object_id = self.ID
+            throw(DomainError(x, 
+                "The number of coupled objects for $object $object_id ($Num_of_el) is incorrect." *
+                "It must be equal to N(N+1)/2, where N is the number of coupled electronic states."
+            ))
+        end
+        #
+        DIMENSION = Int((-1+sqrt(1+8*Num_of_el))/2)
+        #
+        f, RC = COUPLED_PEC(collect(r), self.Lval, self.Rval, subtypes, Nparameters, DIMENSION, betaCouple = coupled_beta)
+        #
+        #
+        self.crossing = RC
         #
         ## convert units
         r, f = unitConversion(r, f, self.obj_type, self.units)
@@ -837,7 +1062,7 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
     end
 end
 #
-function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, sub_type, factor)
+function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, sub_type, factor; state = false)
     r = X
     #
     if factor == 0.0
@@ -886,7 +1111,25 @@ function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, su
             push!(Nparameters,  parse(Float64,n))
         end
         #
-        f = COUPLED_PEC(collect(r), Lval, Rval, subtypes, Nparameters, betaCouple = coupled_beta)
+        ## compute the dimension of the electronic matrix to diagonalise
+        Num_of_el = length(sub_type)
+        #
+        if !is_triangular(Num_of_el)
+            object = obj_type
+            object_id = ID
+            throw(DomainError(x, 
+                "The number of coupled objects for $object $object_id ($Num_of_el) is incorrect." *
+                "It must be equal to N(N+1)/2, where N is the number of coupled electronic states."
+            ))
+        end
+        #
+        DIMENSION = Int((-1+sqrt(1+8*Num_of_el))/2)
+        #
+        f, RC = COUPLED_PEC(collect(r), Lval, Rval, subtypes, Nparameters, DIMENSION, betaCouple = coupled_beta)
+        #
+        if state != false
+            Potential[state].crossing = RC
+        end
         #
         ## convert units
         r, f = unitConversion(r, f, obj_type, units)
@@ -908,6 +1151,94 @@ function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, su
         ## convert units
         r, f = unitConversion(r, f, obj_type, units)
         return r, f.*factor
+    end
+end
+#
+function ComputeProperty_viaParameters_SP(X, ftype, Lval, Rval, obj_type, units, sub_type, factor; state = false)
+    r = X
+    #
+    if factor == 0.0
+        return 0.0
+    end
+    #
+    if ftype == "grid"                                    
+        local r, spline, f_interpolated
+        #
+        # DEFAULT IS CUBIC FOR NOW *********************************************
+		## spline the property onto the defined grid
+        # if occursin("linear",Calculation["grid"].interpolation_type)
+        #     spline = LinearInterpolation(self.Lval, self.Rval)  
+        # elseif occursin("quadratic",Calculation["grid"].interpolation_type)
+        #     spline = interpolate((self.Lval,), self.Rval, Gridded(Quadratic()))
+        # elseif occursin("cubic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(self.Lval, self.Rval)                
+            #spline = CubicSplineInterpolation(self.Lval, self.Rval)
+        # elseif occursin("quintic",Calculation["grid"].interpolation_type)
+        #     spline = Fun(self.Lval, self.Rval, kind="quintic")
+        # end              
+        #
+        ## convert units
+        x, f = unitConversion(Lval, Rval, obj_type, units)
+		#
+        ## compute the interpolated object curve on the bonds grid
+		spline = Spline1D(x, f)
+        f_interpolated = spline(r)
+        #
+        return f_interpolated[1] * factor
+    elseif any(occursin.(["coupled_pec","coupled-pec"], lowercase(ftype)))
+        #
+        coupled_beta = false
+        #
+        if occursin("beta",lowercase(ftype)); coupled_beta = true; end
+        #
+        Nparameters = []
+        subtypes = []
+        #
+        for s in sub_type
+            #
+            subtype, n = split(s, "-")
+            #
+            push!(subtypes, subtype)
+            #
+            push!(Nparameters,  parse(Float64,n))
+        end
+        #
+        ## compute the dimension of the electronic matrix to diagonalise
+        Num_of_el = length(sub_type)
+        #
+        if !is_triangular(Num_of_el)
+            object = obj_type
+            object_id = ID
+            throw(DomainError(x, 
+                "The number of coupled objects for $object $object_id ($Num_of_el) is incorrect." *
+                "It must be equal to N(N+1)/2, where N is the number of coupled electronic states."
+            ))
+        end
+        #
+        DIMENSION = Int((-1+sqrt(1+8*Num_of_el))/2)
+        #
+        f,RC = COUPLED_PEC(r, Lval, Rval, subtypes, Nparameters, DIMENSION, betaCouple = coupled_beta, crossing = Potential[state].crossing)
+        #
+        ## convert units
+        r, f = unitConversion(r, f, obj_type, units)
+        return f[1] * factor 
+    else
+        #
+        ## 
+        func = eval(Symbol(ftype))
+        #
+        ## compute curve
+        if sub_type[1] == "mixang"
+            f = func(r,Rval...)
+        elseif all(sub_type .== "N/A")
+            f = map(x -> func(x, Rval...),r)
+        else
+            f = map(x -> func(x, Rval..., sub_type), r)
+        end
+        #
+        ## convert units
+        r, f = unitConversion(r, f, obj_type, units)
+        return f[1] * factor
     end
 end
 #

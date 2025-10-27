@@ -1,5 +1,5 @@
 grid                
-  npoints 1001
+  npoints 2001
   range   0.7937658163800001 3.7042404764400003
   interpolation_type  cubic
 end

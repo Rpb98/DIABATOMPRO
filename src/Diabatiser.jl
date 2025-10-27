@@ -2489,15 +2489,16 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                     end
                 #
                 elseif lowercase(property) == "lx"
+                    println("TEST")
                     for i=1:dim
                         for j=i:dim
-                            if ("Lx",[i,j]) in keys(Hamiltonian)
+                            if ("LX",[i,j]) in keys(Hamiltonian)
                                 if rep == "adi"
                                     write_EAM(io,r, i, j, Objects["lx"])
                                 else
                                     write_EAM(io,r, i, j, Diabatic_Objects["lx"])
                                 end
-                            elseif ("Lx",[j,i]) in keys(Hamiltonian)
+                            elseif ("LX",[j,i]) in keys(Hamiltonian)
                                 if rep == "adi"
                                     write_EAM(io,r, j, i, Objects["lx"])
                                 else
@@ -2571,7 +2572,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                 end
                                 #
                                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                                    df_W[!,"<dΨ"*string(i)*"/dr|dΨ"*string(j)*"/dr>"] = Objects["K_matrix"][:,i,j] .* kinetic_factor
+                                    df_W[!,"<dΨ"*string(i)*"/dr|dΨ"*string(j)*"/dr>"] = [Objects["K_matrix"][idx][i,j] for idx=1:lastindex(r)] .* kinetic_factor
                                 end
                         end
                     end

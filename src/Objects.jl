@@ -19,6 +19,7 @@ mutable struct PEC
     bounds            :: Array{Any}
     fitted_parameters :: Array{Any}
     fit_range         :: Tuple{Number,Number}
+    crossing          :: Float64
 end
 #
 ## create the spin-orbit class

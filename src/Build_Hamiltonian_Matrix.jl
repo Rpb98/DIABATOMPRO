@@ -23,9 +23,7 @@ for key in keys(Potential)
     # if any(Calculation["method"].states.==key)
     local r, V
     r, V = ComputeProperty(Potential[key])
-    if key == 3
-        # print(V)
-    end
+    #
     PotMat[:,key,key] = V #.- Xre*219474.6313708000
     # end
 end

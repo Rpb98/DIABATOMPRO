@@ -118,6 +118,8 @@ function initialise_input_parameters(line::String)
     #
     input_values["fit_range"] = ("-1e100","1e100")
     #
+    input_values["crossing"] = -1.0
+    #
     ## save block
     input_values["as"] = "file"
     #
@@ -312,7 +314,8 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                                 input_values["fit"],
                                 input_values["bounds"],
                                 input_values["Rval"],
-                                range)
+                                range,
+                                input_values["crossing"])
         #
         if occursin("abinitio",lowercase(object_key))
             abinitio[(obj_type,object.ID)]=object 

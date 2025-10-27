@@ -319,7 +319,7 @@ end
     return ( state_v - 1 ) * rot_dims[ state ] + rot_idx 
 end
 #
-function build_coupled_vibronic_Hamiltonian() #:: TYPE DECLARE NEEDED
+function build_coupled_vibronic_Hamiltonian(contr_vib_wfn) #:: TYPE DECLARE NEEDED
     #
     ## initialise contracted vibronic basis size
     vmax = Calculation["vibronic_solver"].contraction
