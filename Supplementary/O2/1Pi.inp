@@ -555,8 +555,8 @@ NAC 1 2
   type lorentzian
   factor 1.0
   values
-    gamma  0.1      
-    r0     1.57818
-    N      1.0
+    gamma   0.050002617955953434 fit 25%
+    r0      1.58
+    N       1.0
 end
 

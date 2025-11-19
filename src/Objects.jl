@@ -110,20 +110,21 @@ end
 #
 ## Create a method (of diabatisation) class
 mutable struct Method
-    atoms                :: Array{Any}
-    states               :: Array{Int}
-    min_peak_distance    :: Number
-    min_prominence       :: Float64
-    thresh               :: Number
-    diabatisation        :: String
-    N_evo_grid_points    :: Int
-    l_boundary_condition :: Any
-    r_boundary_condition :: Any
-    regularisation       :: Any
-    plot                 :: Bool
-    shift                :: Bool
-    abinitio_fit         :: Bool
-    solve_vibronic       :: Bool
+    atoms                       :: Array{Any}
+    states                      :: Array{Int}
+    min_peak_distance           :: Number
+    min_prominence              :: Float64
+    thresh                      :: Number
+    diabatisation               :: String
+    N_evo_grid_points           :: Int
+    l_boundary_condition        :: Any
+    r_boundary_condition        :: Any
+    regularisation              :: Any
+    plot                        :: Bool
+    shift                       :: Bool
+    abinitio_fit                :: Bool
+    fit_spectroscopic_constants :: Bool
+    solve_vibronic              :: Bool
 end
 #
 ## create a diabatisation save class
@@ -133,6 +134,22 @@ struct Save
 	vmax :: String
 	nroots :: String
 end
+#
+## create a spectroscopic constant class
+struct spectroscopic_constants
+    ID         :: Int
+    name       :: String
+    units      :: String
+    fit_range  :: Tuple{Number,Number}
+    Lval       :: Array{String}
+    Rval       :: Array{Float64}
+end
+# Ve                :: Float64
+# re                :: Float64
+# Ae                :: Float64
+# we                :: Float64
+# wexe              :: Float64
+# Be                :: Float64
 #
 ## Create a sinc-DVR vibronic solver class
 mutable struct Solve_Vibronic

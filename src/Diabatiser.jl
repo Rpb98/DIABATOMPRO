@@ -2564,7 +2564,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                 if i != j
                                     if ("NAC",[i,j]) in keys(Hamiltonian) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
                                         if diabMethod == "evolution"
-                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = Objects["regularised_nac"][:,i,j]
+                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = [Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)]
                                         else
                                             df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = NACMat[:,i,j]
                                         end

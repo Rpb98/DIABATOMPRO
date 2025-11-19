@@ -577,14 +577,14 @@ function repulsive(r,params...)
     #
     V = 0
     #
-    for i=1:lastindex(coefficients)
+    for i=1:lastindex(coefficients) 
         V += coefficients[i]/r^(i-1)
     end
     #
     return V
 end
 #
-function morse_oscillator(Ve,Ae,r,a,re) 
+function morse_oscillator(r,Ve,re,a,Ae) 
     exponent = a
     return Ve+(Ae-Ve)*(1 - exp(-exponent*(r-re)))^(2)
 end
@@ -837,6 +837,12 @@ function discriminant(a,b,c,d)
     return lm, lp
 end
 #
+function discriminant_real_symmetric(a,b,d)
+    lp = ((a.+d)./2).+0.5*sqrt.((a.-d).^2 .+ (4 .* b))
+    lm = ((a.+d)./2).-0.5*sqrt.((a.-d).^2 .+ (4 .* b)) 
+    return lm, lp
+end
+#
 function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np, DIMENSION; betaCouple=false, crossing = false)
     #
     ## index mapping function
@@ -931,8 +937,8 @@ function COUPLED_PEC(r, LVAL, RVAL, TYPES, Np, DIMENSION; betaCouple=false, cros
     end
     #
     ## diagonalise the potential matrix
-    if DIMENSION == 2
-        V1a, V2a = discriminant(V[:,1,1],V[:,1,2],V[:,1,2],V[:,2,2])
+    if DIMENSION == 2  
+        V1a, V2a = discriminant_real_symmetric(V[:,1,1],V[:,1,2],V[:,2,2])
         #
         adi = [V1a, V2a]
         #
@@ -984,7 +990,7 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
         x, f = unitConversion(self.Lval, self.Rval, self.obj_type, self.units)
 		#
         ## compute the interpolated object curve on the bonds grid
-		spline = Spline1D(x, f)
+		spline = Spline1D(x, f, k=3, bc="extrapolate")
         f_interpolated = spline(r)
         #
         ## if evolution is being done then the interpolated grid needs to go to 
@@ -1089,7 +1095,7 @@ function ComputeProperty_viaParameters(X, ftype, Lval, Rval, obj_type, units, su
         x, f = unitConversion(Lval, Rval, obj_type, units)
 		#
         ## compute the interpolated object curve on the bonds grid
-		spline = Spline1D(x, f)
+		spline = Spline1D(x, f, k=3, bc="extrapolate") 
         f_interpolated = spline(r)
         #
         return r, f_interpolated.*factor
@@ -1181,7 +1187,7 @@ function ComputeProperty_viaParameters_SP(X, ftype, Lval, Rval, obj_type, units,
         x, f = unitConversion(Lval, Rval, obj_type, units)
 		#
         ## compute the interpolated object curve on the bonds grid
-		spline = Spline1D(x, f)
+		spline = Spline1D(x, f, k=3, bc="extrapolate")
         f_interpolated = spline(r)
         #
         return f_interpolated[1] * factor
@@ -1457,6 +1463,235 @@ function fit_abinitio()
             # plt.xlim(x[1],x[end])
             plt.xlim(xi,xf)
             plt.legend()
+        end
+    end
+end
+#
+function compute_spectroscopic_parameters(state, Rval; rmin = Calculation["grid"].range[1], rmax =Calculation["grid"].range[2], minima = false)
+    #
+    ## constants
+    mu = 10.6613025642667
+    amu = 1.660538921000E-24
+    h = 6.626069570000E-27
+    c = 29979245800
+    #
+    ## find true minimum
+    if minima == false
+        o_ = optimize(p -> ComputeProperty_viaParameters_SP(p..., 
+                                                            Potential[state].type, 
+                                                            Potential[state].Lval, 
+                                                            Rval, 
+                                                            Potential[state].obj_type, 
+                                                            Potential[state].units, 
+                                                            Potential[state].sub_type, 
+                                                            Potential[state].factor,
+                                                            state = state), 
+                                                            rmin, 
+                                                            rmax, 
+                                                            [1.5],
+                                                            Fminbox(LBFGS()))
+        #
+        Re = Optim.minimizer(o_)[1]
+        Ve = Optim.minimum(o_)
+    else
+        Re, Ve = minima
+    end
+    #
+    function centered_grid(x0, step, N)
+        @assert N ≥ 1 "N must be at least 1"
+        if N == 1
+            return [x0]
+        end
+    
+        # Make sure x0 is included exactly
+        if isodd(N)
+            # symmetric grid
+            half = (N - 1) ÷ 2
+            grid = x0 .+ step .* collect(-half:half)
+        else
+            # for even N, shift so x0 is one of the two middle points
+            half = N ÷ 2
+            grid = x0 .+ step .* collect(-(half-1):half)
+        end
+        return grid
+    end
+    #
+    R_near_min = centered_grid(Re, 0.001, 16)
+    #
+    r_, V_ =  ComputeProperty_viaParameters(R_near_min, 
+                                        Potential[state].type, 
+                                        Potential[state].Lval, 
+                                        Rval, 
+                                        Potential[state].obj_type, 
+                                        Potential[state].units, 
+                                        Potential[state].sub_type, 
+                                        Potential[state].factor)
+    #
+    ## compute derivatives up to 4th order
+    der1 = FiniteDifferenceSP(R_near_min, V_, 8, 1)  #      -0.0000000001
+    der2 = FiniteDifferenceSP(R_near_min, V_, 8, 2)  #  418798.9312634493
+    der3 = FiniteDifferenceSP(R_near_min, V_, 8, 3)  # -2632204.1256825030
+    der4 = FiniteDifferenceSP(R_near_min, V_, 8, 4)  #  13856329.20514625
+    #
+    ## compute Harmonic frequency
+    we = sqrt(h * c * abs(der2) * 10^(16) / (mu * amu)) * (1/(2 * pi * c))
+    #
+    ## compute Rotational constant
+    Be = h / (8 * pi * pi * mu * amu * Re * Re * 10^(-16) * c)
+    #
+    ## compute anharmonicity constant
+    T1 = ((Be)^(2) * Re^(4)) / (12 * (we)^(5))
+    #
+    T2 = 10 * (Be) * (abs(der3))^(2) * Re^(2)
+    #
+    T3 = 3 * (abs(der4)) * we^(2)
+    #
+    xe = T1 * ( T2 - T3 )
+    #
+    r_, Ae =  ComputeProperty_viaParameters(1000, 
+                                            Potential[state].type, 
+                                            Potential[state].Lval, 
+                                            Rval, 
+                                            Potential[state].obj_type, 
+                                            Potential[state].units, 
+                                            Potential[state].sub_type, 
+                                            Potential[state].factor)
+    #
+    return Ve, Re, Ae, Be, we, we*xe
+end
+#
+function fit_spectroscopic_constants()
+    function get_loss_general(state,
+                              values, 
+                              fixParams, 
+                              p_init, 
+                              p_bounds, 
+                              p ; 
+                              rmin=Calculation["grid"].range[1],
+                              rmax= Calculation["grid"].range[2],
+                              minima=false)
+        #
+        for (i,par) in enumerate(p)
+                if fixParams[i] == 0.0
+                        p[i] = p_init[i]
+                else
+                        p[i] = par 
+                        #
+                        if (p[i]<p_bounds[i][1])|(p[i]>p_bounds[i][2])
+                                return 1e100
+                        end
+                end
+        end
+        #
+        ## compute spectroscopic parameters
+        Ve, Re, Ae, Be, we, wexe = compute_spectroscopic_parameters(state, p, rmin = rmin,rmax = rmax, minima=minima)
+        #
+        model = [Ve, Re, Ae, Be, we, wexe]
+        #
+        cost = 0
+        #
+        epsilon = 1e-6
+        #
+        for (idx,param) in enumerate(values)
+            #
+            if isnan(param)
+                continue
+            else
+                cost += ((abs(param) - (model[idx]))/(abs(param) + abs(model[idx]) + epsilon))^2
+            end
+        end
+        #
+        # println("CAT",cost)
+        return sqrt(cost)
+    end
+    #
+    options = Optim.Options(show_trace = true)
+    #
+    for key in keys(SpectroscopicConstants)
+        #
+        ## extract fitting region
+        rmin, rmax = SpectroscopicConstants[key].fit_range
+        #
+        if key in Calculation["method"].states
+            fitting_object = Potential[key]
+            #
+            constants = SpectroscopicConstants[key].Lval
+            values = SpectroscopicConstants[key].Rval
+            #
+            ## re order them based on output of constant calculator
+            ordering = ["ve","re","ae","be","we","wexe"]
+            #
+            c = String[]
+            v = Float64[]
+            
+            for constant in ordering
+                i = findfirst(==(constant), constants)
+                if isnothing(i)
+                    push!(c, constant)
+                    push!(v, NaN)
+                else
+                    push!(c, constant)
+                    push!(v, values[i])
+                end
+            end
+            #
+            constants = c
+            values    = v
+            #
+            ## extract fitting flags, i.e. turn of parameter variation in fit
+            p_excludeFromFit = fitting_object.fit
+            #
+            ## extract guesses for parameters
+            p_guess = fitting_object.Rval
+            p = deepcopy(p_guess)
+            #
+            ## determine the functional form to fit
+            func = fitting_object.type
+            #
+            ## extract parameter bounds
+            p_bounds = fitting_object.bounds
+            #
+            ## obtain parameters for the ComputePropert_viaParameters function
+            Lval     = fitting_object.Lval
+            state  = fitting_object.ID
+            #
+            ## determine whether Re and Ve are parametrised
+            min_param_funcs = ["morse_oscillator","emo"]
+            if lowercase(fitting_object.type) in min_param_funcs
+                minima = zeros(Float64,2)
+                #
+                for (idx, param) in enumerate(Lval)
+                    if lowercase(param) == "re"
+                        minima[1] = fitting_object.Rval[idx]
+                    elseif lowercase(param) == "ve"
+                            minima[2] = fitting_object.Rval[idx]
+                    end
+                end
+            else
+                minima = false
+            end
+            #
+            ## if no parameters are to be fit then skip fitting step
+            if (any(p_excludeFromFit .== 1))
+                    #
+                    ## perform optimization
+                    o_ = optimize(p -> get_loss_general(state, values, p_excludeFromFit, p_guess, p_bounds, p, rmin=rmin, rmax=rmax, minima=minima), [p_guess...], options) 
+                    p = Optim.minimizer(o_)
+                    fitting_object.fitted_parameters = p
+                    println(p)
+            end
+            #
+            ## print fitted constants
+            Ve, Re, Ae, Be, we, wexe = compute_spectroscopic_parameters(fitting_object.ID, p,rmin = rmin,rmax = rmax, minima=minima)
+            #
+            println()
+            println("___ FITTED SPECTROSCOPIC PARAMETERS FOR STATE $state ___")
+            println("Ve   = $Ve   cm-1      vs. ", v[1])
+            println("Re   = $Re   Angstroms vs. ", v[2])
+            println("Ae   = $Ae   cm-1      vs. ", v[3])
+            println("Be   = $Be   cm-1      vs. ", v[4])
+            println("we   = $we   cm-1      vs. ", v[5])
+            println("wexe = $wexe cm-1      vs. ", v[6])
         end
     end
 end

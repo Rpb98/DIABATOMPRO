@@ -37,7 +37,7 @@ print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 # fname =  "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/KH/KH.inp" #"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2Pi/CH_doublet_pi.inp" "/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO.inp"
-read_file("/Users/ryanbrady/Documents/PostDoc/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/CH/2state_CH.inp") # <example_input_name> ../Supplementary/SO/SO_C_Cp_DMZ.inp ./TEST_input.inp"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO_B.inp") ##../Supplementary/SO/SO_B.inp
+read_file("/Users/ryanbrady/Documents/PostDoc/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/src/tests/SO_d1Pi.inp") # <example_input_name> ../Supplementary/SO/SO_C_Cp_DMZ.inp ./TEST_input.inp"/Users/ryanbrady/Documents/PhD/Work/DIABATISATION/DIABATOM_PRO_PACKAGE/github_dev/DIABATOMPRO/Supplementary/SO/SO_B.inp") ##../Supplementary/SO/SO_B.inp
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 # include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
 include("Build_Hamiltonian_Matrix.jl")
@@ -51,13 +51,30 @@ r = LinRange(Calculation["grid"].range[1],
 
 r  = collect(r)
 
+Ve, Re, Ae, Be, we, wexe = compute_spectroscopic_parameters(1, Potential[1].Rval, rmin = 1.35,rmax = 1.9, minima=false)
+
+
+plt.figure()
+plt.plot(r,PotMat[:,1,1])
+
+v = [43902, 1.5303, 4.37878000000000E+04, 0.6752, 607.39, 45.37]
+println()
+println("___ FITTED SPECTROSCOPIC PARAMETERS FOR STATE 1 ___")
+println("Ve   = $Ve   cm-1      vs. ", v[1])
+println("Re   = $Re   Angstroms vs. ", v[2])
+println("Ae   = $Ae   cm-1      vs. ", v[3])
+println("Be   = $Be   cm-1      vs. ", v[4])
+println("we   = $we   cm-1      vs. ", v[5])
+println("wexe = $wexe cm-1      vs. ", v[6])
+
 # compute vibronic energies and wavefunctions for a non-rotating molecule if
 # the 'vibronic_solver' key is in Calculation
 # run the diabatiser
 # if Calculation["method"].abinitio_fit == true
 #     fit_abinitio()
-
-# elseif Calculation["method"].abinitio_fit == false
+# elseif Calculation["method"].fit_spectroscopic_constants == true
+#         fit_spectroscopic_constants()
+# elseif (Calculation["method"].abinitio_fit == false) & (Calculation["method"].fit_spectroscopic_constants == false)
 #     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
 #     fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
@@ -73,22 +90,30 @@ r  = collect(r)
 #                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
 #                     axs[1,1].plot(r,Diabatic_Objects[Calculation["method"].regularisation][:,i,j],label="F"*string(i)*string(j))
 #                     axs[1,1].plot(r,Objects[Calculation["method"].regularisation][:,i,j],"--")
+#                     #
 #                 end
 #             end
 #         end
 #     end
-#     axs[2,1].plot(r,Objects["nac"][:,1,2])
+#     #
+#     for i=1:dim
+#         for j=i+1:dim
+#             if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                 axs[2,1].plot(r,Objects["nac"][:,i,j])
+#             end
+#         end
+#     end
 
 
-#     plt.figure()
-#     plt.plot(r,map(x -> Objects["K_matrix"][x][1,1], collect(1:lastindex(r))))
-#     plt.xlabel("Bond Length, Angstroms")
-#     plt.ylabel("DBOC, cm-1")
+#     # plt.figure()
+#     # plt.plot(r,map(x -> Objects["K_matrix"][x][1,1], collect(1:lastindex(r))))
+#     # plt.xlabel("Bond Length, Angstroms")
+#     # plt.ylabel("DBOC, cm-1")
 
-#     plt.figure()
-#     plt.plot(r,Diabatic_Objects["potential"][:,1,2])
-#     plt.xlabel("Bond Length, Angstroms")
-#     plt.ylabel("Diabatic (potential) coupling, cm-1")
+#     # plt.figure()
+#     # plt.plot(r,Diabatic_Objects["potential"][:,1,2])
+#     # plt.xlabel("Bond Length, Angstroms")
+#     # plt.ylabel("Diabatic (potential) coupling, cm-1")
 
 
 #     # for i=1:dim
@@ -121,13 +146,8 @@ r  = collect(r)
 
 
 
-# save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "O2_ai", special_name = "1Pi")
 
-
-
-
-print(Objects["potential"][1,:,:])
-
+# save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "SO_19SaNadiab", special_name = "Cp")
 
 
 
@@ -135,107 +155,6 @@ print(Objects["potential"][1,:,:])
 
 
 
-
-
-# function compute_spectroscopic_parameters(state; rmin = Calculation["grid"].range[1], rmax =Calculation["grid"].range[2])
-#     #
-#     ## constants
-#     mu = 10.6613025642667
-#     amu = 1.660538921000E-24
-#     h = 6.626069570000E-27
-#     c = 29979245800
-#     #
-#     ## find the equillibrium positio    
-#     # x, y = ComputeProperty(Potential[state])
-#     # #
-#     # ## compute equillibrium position and energy
-#     # mask = (x .>= rmin) .& (x .<= rmax)
-#     # masked_E = y[mask]
-#     # #
-#     # V0, min_index = findmin(masked_E)
-#     # R0 = x[min_index]
-#     R0 = 1
-#     #
-#     ## find true minimum
-#     o_ = optimize(p -> ComputeProperty_viaParameters_SP(p..., 
-#                                                         Potential[state].type, 
-#                                                         Potential[state].Lval, 
-#                                                         Potential[state].Rval, 
-#                                                         Potential[state].obj_type, 
-#                                                         Potential[state].units, 
-#                                                         Potential[state].sub_type, 
-#                                                         Potential[state].factor,
-#                                                         state = state), 
-#                                                         rmin, 
-#                                                         rmax, 
-#                                                         [1.5],
-#                                                         Fminbox(LBFGS()))
-#     #
-#     Re = Optim.minimizer(o_)[1]
-#     Ve = Optim.minimum(o_)  
-
-#     # println("True Re = $Re, Rimin = $R0")
-#     #
-#     function centered_grid(x0, step, N)
-#         @assert N ≥ 1 "N must be at least 1"
-#         if N == 1
-#             return [x0]
-#         end
-    
-#         # Make sure x0 is included exactly
-#         if isodd(N)
-#             # symmetric grid
-#             half = (N - 1) ÷ 2
-#             grid = x0 .+ step .* collect(-half:half)
-#         else
-#             # for even N, shift so x0 is one of the two middle points
-#             half = N ÷ 2
-#             grid = x0 .+ step .* collect(-(half-1):half)
-#         end
-#         return grid
-#     end
-#     #
-#     R_near_min = centered_grid(Re, 0.001, 16)
-#     #
-#     r_, V_ =  ComputeProperty_viaParameters(R_near_min, 
-#                                         Potential[state].type, 
-#                                         Potential[state].Lval, 
-#                                         Potential[state].Rval, 
-#                                         Potential[state].obj_type, 
-#                                         Potential[state].units, 
-#                                         Potential[state].sub_type, 
-#                                         Potential[state].factor)
-#     #
-#     ## compute derivatives up to 4th order
-#     der1 = FiniteDifferenceSP(R_near_min, V_, 8, 1)  #      -0.0000000001
-#     der2 = FiniteDifferenceSP(R_near_min, V_, 8, 2)  #  418798.9312634493
-#     der3 = FiniteDifferenceSP(R_near_min, V_, 8, 3)  # -2632204.1256825030
-#     der4 = FiniteDifferenceSP(R_near_min, V_, 8, 4)  #  13856329.20514625
-#     #
-#     # println("dV/dR = ",der1)
-#     # println("d2V/dR^2 = ",der2)
-#     # println("d3V/dR^3 = ",der3)
-#     # println("d4V/dR^4 = ",der4)
-#     #
-#     ## compute Harmonic frequency
-#     we = sqrt(h * c * abs(der2) * 10^(16) / (mu * amu)) * (1/(2 * pi * c))
-#     #
-#     ## compute Rotational constant
-#     Be = h / (8 * pi * pi * mu * amu * Re * Re * 10^(-16) * c)
-#     #
-#     ## compute anharmonicity constant
-#     T1 = ((Be)^(2) * Re^(4)) / (12 * (we)^(5))
-#     #
-#     T2 = 10 * (Be) * (abs(der3))^(2) * Re^(2)
-#     #
-#     T3 = 3 * (abs(der4)) * we^(2)
-#     #
-#     xe = T1 * ( T2 - T3 )
-#     #
-#     # println("Ve = $Ve cm-1, re = $Re Ang, we = $we cm-1, Be = $Be cm-1, xe = $xe")
-#     #
-#     return Ve, Re, Be, we, xe
-# end
 
 # # # Ve, Re, Be, we, xe = compute_spectroscopic_parameters(1,rmin=1.2,rmax=2.0)
 
@@ -254,93 +173,180 @@ print(Objects["potential"][1,:,:])
 # plt.xlim(1.2,4)
 
 
-# # function d1Pi_params(p)
-# #     Ve,Re,Ae,B0,B1,A6,A7= p #,B2,B3,B4
-# #     #
-# #     Potential[1].Rval[1]  = Ve
-# #     Potential[1].Rval[2]  = Re
-# #     Potential[1].Rval[3]  = Ae
-# #     Potential[1].Rval[9]  = B0
-# #     Potential[1].Rval[10] = B1
-# #     Potential[1].Rval[22] = A6
-# #     Potential[1].Rval[23] = A7
-# #     # Potential[1].Rval[29] = gamma
+# function d1Pi_params(p)
+#     Ve,Re,Ae,B0,B1,A6,A7= p #,B2,B3,B4
+#     #
+#     Potential[1].Rval[1]  = Ve
+#     Potential[1].Rval[2]  = Re
+#     Potential[1].Rval[3]  = Ae
+#     Potential[1].Rval[9]  = B0
+#     Potential[1].Rval[10] = B1
+#     Potential[1].Rval[22] = A6
+#     Potential[1].Rval[23] = A7
+#     # Potential[1].Rval[29] = gamma
 
-# #     #
-# #     x, y = ComputeProperty(Potential[1])
-# #     #
-# #     ## compute spectroscopic parameters
-# #     lower_bound = 1.2
-# #     upper_bound = 2.1
-# #     mask = (x .>= lower_bound) .& (x .<= upper_bound)
-# #     masked_E = y[mask]
-# #     #
-# #     V0_, min_index = findmin(masked_E)
-# #     #
-# #     ## now compute spectroscopic constants
-# #     Ve, Re, Be, we, xe = compute_spectroscopic_parameters(1,rmin = lower_bound,rmax = upper_bound)
-# #     #
-# #     ## compute barrier height
-# #     lower_bound = x[min_index]
-# #     upper_bound = x[end]
-# #     mask = (x .>= lower_bound) .& (x .<= upper_bound)
-# #     masked_E = y[mask]
-# #     Emax, max_index = findmax(masked_E)
-# #     #
-# #     barrier = Emax-Ve
-# #     #
-# #     ##
-# #     De = y[end]
-# #     #
-# #     model = [Ve,Re,barrier,we,xe,De]
-# #     #
-# #     return model
-# # end
+#     #
+#     x, y = ComputeProperty(Potential[1])
+#     #
+#     ## compute spectroscopic parameters
+#     lower_bound = 1.2
+#     upper_bound = 2.1
+#     mask = (x .>= lower_bound) .& (x .<= upper_bound)
+#     masked_E = y[mask]
+#     #
+#     V0_, min_index = findmin(masked_E)
+#     #
+#     ## now compute spectroscopic constants
+#     Ve, Re, Be, we, xe = compute_spectroscopic_parameters(1,rmin = lower_bound,rmax = upper_bound)
+#     #
+#     ## compute barrier height
+#     lower_bound = x[min_index]
+#     upper_bound = x[end]
+#     mask = (x .>= lower_bound) .& (x .<= upper_bound)
+#     masked_E = y[mask]
+#     Emax, max_index = findmax(masked_E)
+#     #
+#     barrier = Emax-Ve
+#     #
+#     ##
+#     De = y[end]
+#     #
+#     model = [Ve,Re,barrier,we,xe,De]
+#     #
+#     return model
+# end
 
 
-# # function cost_d1Pi(p,target)
-# #     model = d1Pi_params(p)
-# #     #
-# #     cost = 0
-# #     #
-# #     weights = [100,100,100,2,2,500]
-# #     #
-# #     for (idx,param) in enumerate(target)
-# #         cost += ((param - model[idx])/param)^2
-# #     end
-# #     #
-# #     return sqrt(cost)
-# # end
+# function cost_d1Pi(p,target)
+#     model = d1Pi_params(p)
+#     #
+#     cost = 0
+#     #
+#     weights = [100,100,100,2,2,500]
+#     #
+#     for (idx,param) in enumerate(target)
+#         cost += ((param - model[idx])/param)^2
+#     end
+#     #
+#     return sqrt(cost)
+# end
 
-# # # p_guess = [Potential[1].Rval[1:3]..., Potential[1].Rval[9:10]...,Potential[1].Rval[22:23]...]
+# function params(p)
+#     #
+#     Potential[2].Rval[3]  = p[1]
+#     #
+#     x, y = ComputeProperty(Potential[2])
+#     #
+#     ## compute spectroscopic parameters
+#     lower_bound = 1.0
+#     upper_bound = 4.0
+#     mask = (x .>= lower_bound) .& (x .<= upper_bound)
+#     masked_E = y[mask]
+#     #
+#     V0_, min_index = findmin(masked_E)
+#     #
+#     ## now compute spectroscopic constants
+#     minparams = [Potential[2].Rval[2],Potential[2].Rval[1]]
+#     Ve, Re, Be, we, xe = compute_spectroscopic_parameters(2, rmin = lower_bound,rmax = upper_bound, minima=minparams)
+#     # println("CATS", Ve, Re, Be, we, xe)
+#     #
+#     ## compute barrier height
+#     lower_bound = x[min_index]
+#     upper_bound = x[end]
+#     mask = (x .>= lower_bound) .& (x .<= upper_bound)
+#     masked_E = y[mask]
+#     Emax, max_index = findmax(masked_E)
+#     #
+#     barrier = Emax-Ve
+#     #
+#     ##
+#     De = Potential[2].Rval[end]
+#     #
+#     model = [Ve,Re,we,we*xe,De]
+#     #
+#     return model
+# end
+
+# function cost_5Pi(p,target)
+#     Ve,Re,we,wexe,De = params(p)
+#     #
+#     model = [we,wexe]
+#     #
+#     cost = 0
+#     #
+#     weights = [100,100,100,2,2,500]
+#     #
+#     for (idx,param) in enumerate(target)
+#         cost += ((param - model[idx])/param)^2
+#     end
+#     #
+#     return sqrt(cost)
+# end
+
+# 44963.0857
+# 45540.45511
+
+# p_guess = [Potential[2].Rval[3]]
    
-# # # options = Optim.Options(show_trace = true)
-# # # o_ = optimize(p -> cost_d1Pi(p,[43902, 1.5303, 1570, 607.39, 0.0747,4.37878000000000E+04]), [p_guess...],options) 
-# # # optimisedParameters = Optim.minimizer(o_)
-
-# # # optimisedParameters = [45599.1975116424,1.570262862330456,47092.63345541411,5.132817840445445,-5.272200632947819,-0.27016618510739876,-0.11121014641033768,-0.055224309749338354]
-# # optimisedParameters = [45528.61998581535,1.5683849423761331,46947.20328186522,5.219027550979376,-4.720131916979748,1.1121798995177096e6,0.45628387218938415]
+# options = Optim.Options(show_trace = true)
+# o_ = optimize(p -> cost_5Pi(p,[330.3, 12.26]), [p_guess...],options) 
+# optimisedParameters = Optim.minimizer(o_)
 
 
-# # Potential[1].Rval[1]   = optimisedParameters[1]
-# # Potential[1].Rval[2]   = optimisedParameters[2]
-# # Potential[1].Rval[3]   = optimisedParameters[3]
-# # Potential[1].Rval[9]   = optimisedParameters[4]
-# # Potential[1].Rval[10]  = optimisedParameters[5]
-# # Potential[1].Rval[22]   = optimisedParameters[6]
-# # Potential[1].Rval[23]   = optimisedParameters[7]
-# # # Potential[1].Rval[13]   = optimisedParameters[8]
+# Potential[2].Rval[3]   = optimisedParameters[1]
 
-# # expt = [43902, 1.5303, 1570, 607.39, 0.0747,4.37878000000000E+04]
+# # Potential[1].Rval[13]   = optimisedParameters[8]
 
-# # println(d1Pi_params(optimisedParameters))
+# expt = [43902, 1.5303, 1570, 607.39, 0.0747,4.37878000000000E+04]
+
+# println(params(Potential[2].Rval[3]))
 
 # # println(d1Pi_params(optimisedParameters).-expt)
 
-# # # #
-# # x, y = ComputeProperty(Potential[1])
+# # #
+# Potential[2].Rval = Potential[2].fitted_parameters
+# x, y = ComputeProperty(Potential[2])
 
-# # plt.plot(x,y)
+# plt.plot(x,y)
+# plt.plot(r,PotMat[:,2,2])
+# plt.ylim(40000,55000)
+# plt.plot(abinitio[("poten",1)].Lval,abinitio[("poten",1)].Rval)
+
+
+
+
+
+
+
+# p_guess = [Potential[1].Rval[1:3]..., Potential[1].Rval[9:10]...,Potential[1].Rval[22:23]...]
+   
+# options = Optim.Options(show_trace = true)
+# o_ = optimize(p -> cost_d1Pi(p,[43902, 1.5303, 1570, 607.39, 0.0747,4.37878000000000E+04]), [p_guess...],options) 
+# optimisedParameters = Optim.minimizer(o_)
+# 
+# optimisedParameters = [45599.1975116424,1.570262862330456,47092.63345541411,5.132817840445445,-5.272200632947819,-0.27016618510739876,-0.11121014641033768,-0.055224309749338354]
+
+# optimisedParameters = [45528.61998581535,1.5683849423761331,46947.20328186522,5.219027550979376,-4.720131916979748,1.1121798995177096e6,0.45628387218938415]
+# Potential[1].Rval[1]   = optimisedParameters[1]
+# Potential[1].Rval[2]   = optimisedParameters[2]
+# Potential[1].Rval[3]   = optimisedParameters[3]
+# Potential[1].Rval[9]   = optimisedParameters[4]
+# Potential[1].Rval[10]  = optimisedParameters[5]
+# Potential[1].Rval[22]   = optimisedParameters[6]
+# Potential[1].Rval[23]   = optimisedParameters[7]
+# # Potential[1].Rval[13]   = optimisedParameters[8]
+
+# expt = [43902, 1.5303, 1570, 607.39, 0.0747,4.37878000000000E+04]
+
+# println(d1Pi_params(optimisedParameters))
+
+# println(d1Pi_params(optimisedParameters).-expt)
+
+# # #
+# x, y = ComputeProperty(Potential[1])
+
+# plt.plot(x,y)
+# plt.plot(abinitio[("poten",1)].Lval,abinitio[("poten",1)].Rval)
 
 # # data_matrix = hcat(x, y)
 

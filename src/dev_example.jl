@@ -36,7 +36,7 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-read_file("../Supplementary/O2/1Pi.inp")
+read_file("../Supplementary/CH/DIABATOM-PRO_CH.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Build_Hamiltonian_Matrix.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~ RUN DIABATISATION PIPELINES ~~~~~~~~~~~~~~~~~~~~~~#
@@ -58,18 +58,18 @@ if Calculation["method"].abinitio_fit == true
 elseif Calculation["method"].abinitio_fit == false
     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
-    # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
-    # plt.subplots_adjust(wspace=0, hspace=0)
-    # for i=1:dim
-    #     if i in Calculation["method"].states
-    #         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-    #         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-    #     end
-    # end
-    # axs[2,1].plot(r,Objects["nac"][:,1,2])
-    # axs[2,1].set_xlabel("Bond Length, Angstrom")
-    # axs[2,1].set_ylabel("NAC, 1/Angstrom")
-    # axs[1,1].set_ylabel("Potential, cm-1")
+    fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+    plt.subplots_adjust(wspace=0, hspace=0)
+    for i=1:dim
+        if i in Calculation["method"].states
+            axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+            axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+        end
+    end
+    axs[2,1].plot(r,Objects["nac"][:,1,2])
+    axs[2,1].set_xlabel("Bond Length, Angstrom")
+    axs[2,1].set_ylabel("NAC, 1/Angstrom")
+    axs[1,1].set_ylabel("Potential, cm-1")
 
 
     # plt.figure()
@@ -87,10 +87,22 @@ end
 # print(Objects["potential"][1,:,:])
 
 
-save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "O2_ai", special_name = "full_model")
+save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "KH_ai", special_name = "N-state_full_model")
 
 # plt.figure()
 # plt.plot(r,Objects["spin-orbit"][:,1,3],"--")
 # plt.plot(r,Diabatic_Objects["spin-orbit"][:,1,3])
+
+# plt.figure()
+# plt.plot(r,Objects["lx"][:,1,3],"--")
+# plt.plot(r,Diabatic_Objects["lx"][:,1,3])
+
+# plt.figure()
+# plt.plot(r,Objects["dipole"][:,1,3],"--")
+# plt.plot(r,Diabatic_Objects["lx"][:,1,3])
+
+# plt.plot(r,Objects["spin-orbit"][:,2,3],"--")
+# plt.plot(r,Diabatic_Objects["spin-orbit"][:,2,3])
+
 # plt.xlabel("Bond Length, Angstroms")
 # plt.ylabel("Diabatic (potential) coupling, cm-1")
