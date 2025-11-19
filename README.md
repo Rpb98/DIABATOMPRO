@@ -177,7 +177,7 @@ After installing the package, here's an example of how to run the main function:
 using DIABATOMPRO
 
 # Example of using the main function
-U, Adiabatic_Objects, Diabatic_Objects, Diabatic_Basis, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
+U, Adiabatic_Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
 ```
 After running the above function, a diabatic representation of your input adiabatic system should be computed. Please see a comprehensive guide below for more details. The function has the following inpit & output syntax:
 
