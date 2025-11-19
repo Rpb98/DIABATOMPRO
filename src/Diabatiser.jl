@@ -1957,6 +1957,25 @@ function run_diabatiser(diabMethod)
 end
 #
 function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_properties, fname; special_name = "", folder_path = false, intensity_flag = false, thresh_intes  = 1e-40, thresh_line   = 1e-40, thresh_bound  = 1e-4, thresh_dipole = 1e-8)
+    #
+    # --- DEFINE DIM ---
+    dim = size(Objects["potential"], 2) 
+    # ----------------------------
+    #
+    output_dir = dirname(abspath(fname))
+    # This extracts just "CH" from "CH.inp" or "./CH.inp" automatically
+    file_stem  = splitext(basename(fname))[1]
+    #
+    # --- DEBUG BLOCK START ---
+    # println("\n" * "="^50)
+    # println("DEBUG TRACER:")
+    # println("1. Input fname: ", fname)
+    # println("2. Resolved Output Dir: ", output_dir)
+    # println("3. Save Format Requested: ", Calculation["save"].as)
+    # println("4. Save File Stem: ", file_stem)
+    # println("5. DIMENSION: ", dim)
+    # println("="^50 * "\n")
+    #
     function duo_calc_setup(io, atom1, atom2, dim, r, jrot, vmax)
         #
         ## rovibronic symmetry
@@ -2398,7 +2417,9 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #
         ##
         for rep in ["adi","dia"]
-            open(fname[1:end-4]*"_duo_"*special_name*"_"*rep*".inp", "w") do io
+            out_duo_name = joinpath(output_dir, file_stem * "_duo_" * special_name * "_" * rep * ".inp")
+            #
+            open(out_duo_name, "w") do io
             #
             ## write the duo calculation setup
             duo_calc_setup(io, atom1, atom2, dim, r, jrot, vmax)
@@ -2553,8 +2574,10 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write(rep*"_poten.dat", df_pot)
-                    CSV.write("DC.dat", df_DC)
+                    # CSV.write(rep*"_poten.dat", df_pot)
+                    # CSV.write("DC.dat", df_DC)
+                    CSV.write(joinpath(output_dir, special_name * "_" * rep * "_poten.dat"), df_pot)
+                    CSV.write(joinpath(output_dir, special_name * "_" * "DC.dat"), df_DC)
                 #
                 elseif (property == "nac")&(rep == "adi")
                     df_W = DataFrame()
@@ -2577,7 +2600,8 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write("DDR.dat", df_W)
+                    # CSV.write("DDR.dat", df_W)
+                    CSV.write(joinpath(output_dir, special_name * "_" * "DDR.dat"), df_W)
                 #
                 elseif property == "spin-orbit"
                     df_SO = DataFrame()
@@ -2594,7 +2618,8 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write("spin-orbit_"*rep*".dat", df_SO)
+                    # CSV.write("spin-orbit_"*rep*".dat", df_SO)
+                    CSV.write(joinpath(output_dir, special_name * "_" *"spin-orbit_"*rep*".dat"), df_SO)
                 #
                 elseif property == "dipole"
                     df_DM = DataFrame()
@@ -2611,7 +2636,8 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write("dipole_"*rep*".dat", df_DM)
+                    # CSV.write("dipole_"*rep*".dat", df_DM)
+                    CSV.write(joinpath(output_dir, special_name * "_" *"dipole_"*rep*".dat"), df_DM)
                 #
                 elseif property == "lx"
                     df_LX = DataFrame()
@@ -2628,9 +2654,689 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                         end
                     end
                     #
-                    CSV.write("Lx_"*rep*".dat", df_LX)
+                    # CSV.write("Lx_"*rep*".dat", df_LX)
+                    CSV.write(joinpath(output_dir, special_name * "_" *"Lx_"*rep*".dat"), df_LX)
                 end
             end
         end
     end
 end
+#
+# function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_properties, fname; special_name = "", folder_path = false, intensity_flag = false, thresh_intes  = 1e-40, thresh_line   = 1e-40, thresh_bound  = 1e-4, thresh_dipole = 1e-8)
+#     function duo_calc_setup(io, atom1, atom2, dim, r, jrot, vmax)
+#         #
+#         ## rovibronic symmetry
+#         if atom1==atom2
+#             calc_symmetry = "C2v"
+#         elseif atom1!=atom2
+#             calc_symmetry = "Cs(M)"
+#         end
+#         #
+#         multiplicity = Hamiltonian[("poten",1)].mult
+#         #
+#         if iseven(Int(multiplicity))
+#             if isinteger(parse(Float64,jrot))
+#                 println("Multiplicity of the electronic states is not compatible with an integer j. If multiplicity is even then j is a half integer!")
+#             end
+#         else
+#             if isinteger(parse(Float64,jrot)) == false
+#                 println("Multiplicity of the electronic states is not compatible with a half-integer j. If multiplicity is off then j is an integer!")
+#             end
+#         end
+#         #
+#         ## duo input setup
+#         println(io, "masses "*string(atom1)*" "*string(atom2))
+#         println(io, "")
+#         println(io, "nstates "*string(dim))
+#         println(io, "")
+#         println(io, "jrot "*string(jrot))
+#         println(io, "")
+#         println(io, "grid")
+#         println(io, "  npoints "*string(length(r)))
+#         println(io, "  range   "*string(r[1])*" "*string(r[end]))
+#         println(io, "  type 0")
+#         println(io, "end")
+#         println(io, "")
+#         println(io, "(PRINT_PECS_AND_COUPLINGS_TO_FILE)")
+#         println(io, "")
+#         println(io, "CONTRACTION")
+#         println(io, " vib")
+#         println(io, " vmax "*string(vmax))
+#         println(io, "END")
+#         println(io, "")
+#         println(io, "DIAGONALIZER")
+#         println(io, "SYEVR")
+#         println(io, "nroots "*Calculation["save"].nroots)
+#         println(io, "end")
+#         println(io, "")
+#         println(io, "symmetry "*string(calc_symmetry))
+#         println(io, "")
+#     end
+#     #
+#     function duo_intensity_block(io, fname, rep, jrot, Emax; intensity_flag = false, thresh_intes  = 1e-40, thresh_line   = 1e-40, thresh_bound  = 1e-4, thresh_dipole = 1e-8)
+#         if intensity_flag == false
+#             println(io,"INTENSITY off")
+#         elseif intensity_flag == true
+#             println(io,"INTENSITY")
+#         end
+#         println(io,"absorption")
+#         println(io,"bound ")
+#         println(io,"THRESH_INTES  "*string(thresh_intes ))
+#         println(io,"THRESH_LINE   "*string(thresh_line  ))
+#         println(io,"thresh_bound  "*string(thresh_bound ))
+#         println(io,"thresh_dipole "*string(thresh_dipole))
+#         println(io,"TEMPERATURE   3000.0  (  RENORMALIZE)")
+#         println(io,"linelist  "*fname[1:end-4]*"_"*special_name*"_"*rep)
+#         println(io,"J, "*string(jrot))
+#         println(io,"freq-window    0, "*string(Emax))
+#         println(io,"energy low   -0.001, "*string(Emax)*", upper   -0.00, "*string(Emax))
+#         println(io,"")
+#     end
+#     #
+#     function KE_factor(m1,m2)
+#         #
+#         ## constants
+#         h = 6.626069570000*10^(-34)   # J s
+#         c = 299792458.0000       # m/s
+#         amu = 1.660538921000*10^(-27) # kg
+#         #
+#         ## reduced mass
+#         mu = amu*m1*m2/(m1+m2)
+#         #
+#         ## KE factor
+#         factor = (h/(8*pi^2*mu*c))*10^(18)
+#         #
+#         return factor
+#     end
+#     #
+#     function write_PEC(io,r, state, Potential_Matrix)
+#         V = Hamiltonian[("poten",state)]
+#         #
+#         name = V.name
+#         #
+#         symmetry = V.symmetry
+#         #
+#         L = V.lambda
+#         #
+#         S = V.mult
+#         #
+#         println(io, "poten " * string(state))
+#         println(io, "name \"" * name * "\"")
+#         println(io, "symmetry " * symmetry)
+#         println(io, "lambda " * string(Int(L)))
+#         println(io, "mult " * string(Int(S)))
+#         println(io, "type  grid")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             y = Potential_Matrix[idx, state, state]
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_NAC(io,r, i, j, NAC_Matrix)
+#         W = Hamiltonian[("NAC",[i,j])]
+#         #
+#         name = W.name
+#         #
+#         V = Hamiltonian[("poten",i)]
+#         #
+#         symmetry = V.symmetry
+#         #
+#         L = V.lambda
+#         #
+#         S = V.mult
+#         #
+#         println(io, "NAC " * string(i) * " " * string(j))
+#         println(io, "name \"" * name * "\"")
+#         println(io, "symmetry " * symmetry)
+#         println(io, "lambda " * string(L))
+#         println(io, "mult " * string(S))
+#         println(io, "type  grid")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             if NAC_Matrix isa Array{Float64, 3}
+#                 y = NAC_Matrix[idx, i, j]
+#             else
+#                 y = NAC_Matrix[idx][i, j]
+#             end
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_W2(io,r,i,j,K_Matrix,factor)
+#         V = Hamiltonian[("poten",i)]
+#         #
+#         symmetry = V.symmetry
+#         #
+#         L = V.lambda
+#         #
+#         S = V.mult
+#         #
+#         name = "< "*string(i)*" | ∇ | "*string(j)*" >"
+#         #
+#         println(io, "diabatic " * string(i) * " " * string(j))
+#         println(io, "name \"" * name * "\"")
+#         println(io, "symmetry " * symmetry)
+#         println(io, "lambda " * string(L))
+#         println(io, "mult " * string(S))
+#         println(io, "type  grid")
+#         println(io, "factor "*string(factor))
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             if K_Matrix isa Array{Float64,3}
+#                 y = K_Matrix[idx, i, j]
+#             else
+#                 y = K_Matrix[idx][i, j]
+#             end
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_DC(io,r,i,j,Vd_Matrix)
+#         V = Hamiltonian[("poten",i)]
+#         #
+#         symmetry = V.symmetry
+#         #
+#         L = V.lambda
+#         #
+#         S = V.mult
+#         #
+#         name = "< "*string(i)*" | DC | "*string(j)*" >"
+#         #
+#         println(io, "diabat " * string(i) * " " * string(j))
+#         println(io, "name \"" * name * "\"")
+#         println(io, "symmetry " * symmetry)
+#         println(io, "lambda " * string(L))
+#         println(io, "mult " * string(S))
+#         println(io, "type  grid")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             y = Vd_Matrix[idx, i, j]
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_SOC(io,r,i,j,SO_Matrix)
+#         SO = SpinOrbit[[i,j]] #Hamiltonian[("spin-orbit",[i,j])]
+#         #
+#         spin = SO.spin
+#         spin = [string(spin[1])," ",string(spin[2])]
+#         #
+#         sigma = SO.sigma
+#         sigma = [string(sigma[1])," ",string(sigma[2])]
+#         #
+#         Lz = SO.Lz
+#         Lz = [string(Lz[1])," ",string(Lz[2])]
+#         #
+#         Vi = Hamiltonian[("poten",i)]
+#         #
+#         symmetryi = Vi.symmetry
+#         #
+#         Li = Vi.lambda
+#         #
+#         Si = Vi.mult
+#         #
+#         Vj = Hamiltonian[("poten",j)]
+#         #
+#         symmetryj = Vj.symmetry
+#         #
+#         Lj = Vj.lambda
+#         #
+#         Sj = Vj.mult
+#         #
+#         symmetry = [symmetryi," ",symmetryj]
+#         #
+#         L = [string(Int(Li))," ",string(Int(Lj))]
+#         #
+#         S = [string(Int(Si))," ",string(Int(Sj))]
+#         #
+#         ## object name
+#         name = "< "*string(i)*" | SO | "*string(j)*" >"
+#         #
+#         if i != j
+#             println(io, "spin-orbit-x " * string(i) * " " * string(j))
+#         else
+#             println(io, "spin-orbit " * string(i) * " " * string(j))
+#         end
+#         #
+#         println(io, "name \"" * name * "\"")
+#         println(io, "spin " * join(spin))
+#         println(io, "sigma " * join(sigma))
+#         println(io, "lambda " * join(L))
+#         println(io, "<x|Lz|y> " * join(Lz))
+#         println(io, "type  grid")
+#         println(io, "factor i")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             y = SO_Matrix[idx, i, j]
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_EAM(io,r,i,j,Lx_Matrix)
+#         Lx = EAMC[[i,j]] #Hamiltonian[("lx",[i,j])]
+#         #
+#         spin = Lx.spin
+#         spin = [string(spin[1])," ",string(spin[2])]
+#         #
+#         Lz = Lx.Lz
+#         Lz = [string(Lz[1])," ",string(Lz[2])]
+#         #
+#         Vi = Hamiltonian[("poten",i)]
+#         #
+#         # symmetryi = Vi.symmetry
+#         #
+#         Li = Vi.lambda
+#         #
+#         Si = Vi.mult
+#         #
+#         Vj = Hamiltonian[("poten",j)]
+#         #
+#         # symmetryj = Vj.symmetry
+#         #
+#         Lj = Vj.lambda
+#         #
+#         Sj = Vj.mult
+#         #
+#         # symmetry = [symmetryi," ",symmetryj]
+#         #
+#         L = [string(Int(Li))," ",string(Int(Lj))]
+#         #
+#         S = [string(Int(Si))," ",string(Int(Sj))]
+#         #
+#         ## object name
+#         name = "< "*string(i)*" | Lx | "*string(j)*" >"
+#         #
+#         println(io, "Lx " * string(i) * " " * string(j))
+#         println(io, "name \"" * name * "\"")
+#         println(io, "spin " * join(spin))
+#         println(io, "lambda " * join(L))
+#         # println(io, "mult " * join(S))
+#         println(io, "<x|Lz|y> " * join(Lz))
+#         println(io, "type  grid")
+#         println(io, "factor i")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             y = Lx_Matrix[idx, i, j]
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     function write_dipole(io,r,i,j,DM_Matrix)
+#         dm = Hamiltonian[("dipole",[i,j])]
+#         #
+#         Lz = dm.Lz
+#         #
+#         Vi = Hamiltonian[("poten",i)]
+#         #
+#         # symmetryi = Vi.symmetry
+#         #
+#         Li = Vi.lambda
+#         #
+#         Si = Vi.mult
+#         #
+#         Vj = Hamiltonian[("poten",j)]
+#         #
+#         # symmetryj = Vj.symmetry
+#         #
+#         Lj = Vj.lambda
+#         #
+#         Sj = Vj.mult
+#         #
+#         # symmetry = [symmetryi," ",symmetryj]
+#         #
+#         L = [string(Int(Li))," ",string(Int(Lj))]
+#         #
+#         S = [string(Int(Si))," ",string(Int(Sj))]
+#         #
+#         Lz_arr = [string(Int(Li))*"i"," ",string(Int(Lj))*"i"]
+#         # if Li == 0.0
+#         #     Lz_arr[1] = "0"
+#         # elseif Lj == 0
+#         #     Lz_arr[2] = "0"
+#         # end
+#         #
+#         if Lz[1] == "N/A"
+#             if Li == 0.0
+#                 Lz_arr[1] = "0"
+#             end
+#         else
+#             Lz_arr[1] = Lz[1]
+#         end
+#         #
+#         if Lz[2] == "N/A"
+#             if Lj == 0.0
+#                 Lz_arr[3] = "0"
+#             end
+#         else
+#             Lz_arr[3] = Lz[2]
+#         end
+#         #
+#         ## object name
+#         name = "< "*string(i)*" | DM | "*string(j)*" >"
+#         #
+#         if i != j
+#             println(io, "dipole-x " * string(i) * " " * string(j))
+#         else
+#             println(io, "dipole " * string(i) * " " * string(j))
+#         end
+#         #
+#         println(io, "name \"" * name * "\"")
+#         # println(io, "symmetry " * join(symmetry))
+#         println(io, "lambda " * join(L))
+#         println(io, "mult " * join(S))
+#         if i!=j
+#             println(io, "<x|Lz|y> " * join(Lz_arr))
+#         end
+#         println(io, "type  grid")
+#         println(io, "factor 1")
+#         println(io, "values")
+#         #
+#         for idx=1:size(r)[1]
+#             x = r[idx]
+#             y = DM_Matrix[idx, i, j]
+#             @printf(io, "\t %.16f \t %.16f \n", x, y)
+#         end
+#         #
+#         println(io, "end")
+#         println(io, "")
+#     end
+#     #
+#     ## check if folder exists
+#     # if folder_path != false
+#     #     if isdir(folder_path)
+#     #         #
+#     #         ## current date and time
+#     #         current_datetime = now()
+#     #         #
+#     #         folder_path = folder_path*"_"*string(current_datetime)
+#     #         #
+#     #         mkdir(folder_path)
+#     #     else
+#     #         mkdir(folder_path)
+#     #     end
+#     # else
+#     #     folder_path = ""
+#     # end
+#     #
+#     ## specify atomic masses
+#     atom1, atom2 = Calculation["method"].atoms
+#     kinetic_factor =  KE_factor(atom1, atom2)
+#     #
+#     if lowercase(Calculation["save"].as) == "duo"
+#         #
+#         ## initialise quantities
+#         atom1, atom2 = Calculation["method"].atoms
+#         jrot = Calculation["save"].jrot
+#         vmax = Calculation["save"].vmax
+#         #
+#         kinetic_factor =  KE_factor(atom1, atom2)
+#         #
+#         ##
+#         for rep in ["adi","dia"]
+#             open(fname[1:end-4]*"_duo_"*special_name*"_"*rep*".inp", "w") do io
+#             #
+#             ## write the duo calculation setup
+#             duo_calc_setup(io, atom1, atom2, dim, r, jrot, vmax)
+#             #
+#             ## now write curves
+#             for property in input_properties
+#                 if lowercase(property) == "poten"
+#                     for i=1:dim
+#                         if rep == "adi"
+#                             write_PEC(io,r, i, Objects["potential"])
+#                         else
+#                             write_PEC(io,r, i, Diabatic_Objects["potential"])
+#                             #
+#                             # for j=i+1:dim
+#                             #     if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                             #         write_DC(io,r, i, j, Diabatic_Objects["potential"])
+#                             #     end
+#                             # end
+#                         end
+#                     end
+#                     #
+#                     ## write diabatic couplings
+#                     if rep == "dia"
+#                         for i=1:dim
+#                             for j=i+1:dim
+#                                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                     write_DC(io,r, i, j, Diabatic_Objects["potential"])
+#                                 end
+#                             end
+#                         end
+#                     end
+#                 #
+#                 elseif (lowercase(property) == "nac")&(rep == "adi")
+#                     for i=1:dim
+#                         for j=i:dim
+#                                 if i != j
+#                                     if ("NAC",[i,j]) in keys(Hamiltonian) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                         if diabMethod == "evolution"
+#                                             write_NAC(io,r, i, j, Objects["regularised_nac"])
+#                                         else
+#                                             write_NAC(io,r, i, j, NACMat)
+#                                         end
+#                                     end
+#                                 end
+#                                 #
+#                                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                     write_W2(io,r, i, j, Objects["K_matrix"], kinetic_factor)
+#                                 end
+#                         end
+#                     end
+#                 #
+#                 elseif lowercase(property) == "spin-orbit"
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("spin-orbit",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_SOC(io,r, i, j, Objects["spin-orbit"])
+#                                 else
+#                                     write_SOC(io,r, i, j, Diabatic_Objects["spin-orbit"])
+#                                 end
+#                             elseif ("spin-orbit",[j,i]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_SOC(io,r, j, i, Objects["spin-orbit"])
+#                                 else
+#                                     write_SOC(io,r, j, i, Diabatic_Objects["spin-orbit"])
+#                                 end
+#                             end
+#                         end
+#                     end
+#                 #
+#                 elseif lowercase(property) == "dipole"
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("dipole",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_dipole(io,r, i, j, Objects["dipole"])
+#                                 else
+#                                     write_dipole(io,r, i, j, Diabatic_Objects["dipole"])
+#                                 end
+#                             elseif ("dipole",[j,i]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_dipole(io,r, j, i, Objects["dipole"])
+#                                 else
+#                                     write_dipole(io,r, j, i, Diabatic_Objects["dipole"])
+#                                 end
+#                             end
+#                         end
+#                     end
+#                 #
+#                 elseif lowercase(property) == "lx"
+#                     println("TEST")
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("LX",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_EAM(io,r, i, j, Objects["lx"])
+#                                 else
+#                                     write_EAM(io,r, i, j, Diabatic_Objects["lx"])
+#                                 end
+#                             elseif ("LX",[j,i]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     write_EAM(io,r, j, i, Objects["lx"])
+#                                 else
+#                                     write_EAM(io,r, j, i, Diabatic_Objects["lx"])
+#                                 end
+#                             end
+#                         end
+#                     end
+#                 end
+#             end
+#             #
+#             ## write intensity block
+#             Emax = maximum(Objects["potential"][end,:,:]) - minimum(Objects["potential"][:,1,1])
+#             duo_intensity_block(io,fname, rep, jrot, Emax, intensity_flag = intensity_flag, thresh_intes  = thresh_intes, thresh_line   = thresh_line, thresh_bound  = thresh_bound, thresh_dipole = thresh_dipole)
+#             #
+#             ##
+#             println(io,"END")
+#             println(io,"")
+#             println(io,"")
+#             println(io,"")
+#             println(io,"")
+#             println(io,"")
+#             end
+#         end
+#     end
+#     #
+#     if lowercase(Calculation["save"].as) == "dataframe"
+#         for rep in ["adi","dia"]
+#             #
+#             ## create DataFrames
+#             for property in input_properties
+#                 if property == "poten"
+#                     df_pot = DataFrame()
+#                     df_pot[!,"R"] = r
+#                     #
+#                     df_DC = DataFrame()
+#                     df_DC[!,"R"] = r
+#                     #
+#                     Adiabatic_PotMat = Objects["potential"]
+#                     #
+#                     for i=1:dim
+#                         if rep == "adi"
+#                             df_pot[!,"V"*string(i)] = Adiabatic_PotMat[:,i,i]
+#                         else
+#                             df_pot[!,"V"*string(i)] = Diabatic_Objects["potential"][:,i,i]
+#                             #
+#                             for j=i+1:dim
+#                                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                     df_DC[!,"<"*string(i)*"|Vd|"*string(j)*">"] = Diabatic_Objects["potential"][:,i,j]
+#                                 end
+#                             end
+#                         end
+#                     end
+#                     #
+#                     CSV.write(rep*"_poten.dat", df_pot)
+#                     CSV.write("DC.dat", df_DC)
+#                 #
+#                 elseif (property == "nac")&(rep == "adi")
+#                     df_W = DataFrame()
+#                     df_W[!,"R"] = r
+#                     for i=1:dim
+#                         for j=i:dim
+#                                 if i != j
+#                                     if ("NAC",[i,j]) in keys(Hamiltonian) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                         if diabMethod == "evolution"
+#                                             df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = [Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)]
+#                                         else
+#                                             df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = NACMat[:,i,j]
+#                                         end
+#                                     end
+#                                 end
+#                                 #
+#                                 if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#                                     df_W[!,"<dΨ"*string(i)*"/dr|dΨ"*string(j)*"/dr>"] = [Objects["K_matrix"][idx][i,j] for idx=1:lastindex(r)] .* kinetic_factor
+#                                 end
+#                         end
+#                     end
+#                     #
+#                     CSV.write("DDR.dat", df_W)
+#                 #
+#                 elseif property == "spin-orbit"
+#                     df_SO = DataFrame()
+#                     df_SO[!,"R"] = r
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("spin-orbit",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Objects["spin-orbit"][:,i,j]
+#                                 else
+#                                     df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Diabatic_Objects["spin-orbit"][:,i,j]
+#                                 end
+#                             end
+#                         end
+#                     end
+#                     #
+#                     CSV.write("spin-orbit_"*rep*".dat", df_SO)
+#                 #
+#                 elseif property == "dipole"
+#                     df_DM = DataFrame()
+#                     df_DM[!,"R"] = r
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("dipole",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     df_DM[!,"<"*string(i)*"|DM|"*string(j)*">"] = Objects["dipole"][:,i,j]
+#                                 else
+#                                     df_DM[!,"<"*string(i)*"|DM|"*string(j)*">"] = Diabatic_Objects["dipole"][:,i,j]
+#                                 end
+#                             end
+#                         end
+#                     end
+#                     #
+#                     CSV.write("dipole_"*rep*".dat", df_DM)
+#                 #
+#                 elseif property == "lx"
+#                     df_LX = DataFrame()
+#                     df_LX[!,"R"] = r
+#                     for i=1:dim
+#                         for j=i:dim
+#                             if ("LX",[i,j]) in keys(Hamiltonian)
+#                                 if rep == "adi"
+#                                     df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Objects["lx"][:,i,j]
+#                                 else
+#                                     df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Diabatic_Objects["lx"][:,i,j]
+#                                 end
+#                             end
+#                         end
+#                     end
+#                     #
+#                     CSV.write("Lx_"*rep*".dat", df_LX)
+#                 end
+#             end
+#         end
+#     end
+# end

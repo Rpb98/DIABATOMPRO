@@ -80,18 +80,19 @@ function Diabatise(fname; save_flag = false, special_name = "")
         fit_abinitio()
         return nothing, nothing, nothing, nothing, nothing
     elseif Calculation["method"].abinitio_fit == false
-        U, dU, UdU, K_Matrix, diabatic_basis, Diabatic_Objects, input_properties = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+        U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
     end
     #
     ## make a new Hamiltonian with different representations
     #
     ## save diabatisation?
     if save_flag == true
+        println("___SAVING____")
         save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, fname, special_name = special_name)
     end
     #
     ## return the AtDT, adiabatic and diabatic matrix objects, diabatic basis, and Hamiltonians
-    return U, Objects, Diabatic_Objects, diabatic_basis, Hamiltonian
+    return U, Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian
 end
 end
 
