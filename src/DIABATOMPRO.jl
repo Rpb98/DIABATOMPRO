@@ -16,6 +16,9 @@ include("functions.jl")
 include("input_reader.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATISER ROUTINES ~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Diabatiser.jl")
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
+include("Build_Hamiltonian_Matrix.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DIABATOMPRO FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 export Diabatise, fit_abinitio, Forward_Evolution, Backward_Evolution
 #
@@ -43,7 +46,15 @@ function Diabatise(fname; save_flag = false, special_name = "")
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     read_file(fname)
     #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
-    include(joinpath(@__DIR__, "Build_Hamiltonian_Matrix.jl"))
+    # 2. CALL THE FUNCTION HERE
+    # We pass the global variables (Calculation, Potential, etc.) into the function
+    # and capture the result in 'Objects'
+    global Objects = build_hamiltonian_objects(Calculation, 
+                                               Potential, 
+                                               SpinOrbit, 
+                                               EAMC, 
+                                               Dipole, 
+                                               NonAdiabaticCoupling)
     #~~~~~~~~~~~~~~~~~~~~~~~ RUN DIABATISATION PIPELINES ~~~~~~~~~~~~~~~~~~~~~~#
     #
     ## define the bond length vector
