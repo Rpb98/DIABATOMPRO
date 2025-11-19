@@ -1,7 +1,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LIBRARIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #
-using Dierckx
 import Base.replace
+using Dierckx
 using Interpolations
 using LinearAlgebra
 using ApproxFun
