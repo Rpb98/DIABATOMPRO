@@ -1,8 +1,8 @@
 module DIABATOMPRO
 #
 ## add PyPlot library, but be warned this is broken in some julia versions
-using PyPlot
-const plt = PyPlot
+# using PyPlot
+# const plt = PyPlot
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LIBRARIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 include("dependencies.jl")
