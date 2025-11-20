@@ -177,9 +177,9 @@ After installing the package, here's an example of how to run the main function:
 using DIABATOMPRO
 
 # Example of using the main function
-U, Adiabatic_Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
+res = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
 ```
-After running the above function, a diabatic representation of your input adiabatic system should be computed. Please see a comprehensive guide below for more details. The function has the following inpit & output syntax:
+After running the above function, a diabatic representation of your input adiabatic system should be computed. Please see a comprehensive guide below for more details. The function has the following input & output syntax:
 
 **Input:**
 * `"path/to/input-file.inp"` : the path to the input file ([see here for details on the input file](#the-input-file))
@@ -189,11 +189,13 @@ After running the above function, a diabatic representation of your input adiaba
 * `special_name` : is a string that will be incoorporated into the saved output files of the diabatisation.
 
 **Output:**
-* `U` : the adiabatic to diabatic transformation (AtDT) with shape 
+* `res` : an object which contains the results of the diabatisation. The results can be obtained as follows:
+   
+* `res.U` : the adiabatic to diabatic transformation (AtDT) with shape 
 
-* `Adiabatic_Objects` : a dictionary of adiabatic property matrices, each of shape 
+* `res.adiabatic` : a dictionary of adiabatic property matrices, each of shape 
 
-* `Diabatic_Objects` : a dictionary of diabatic property matrices, each of shape 
+* `res.diabatic` : a dictionary of diabatic property matrices, each of shape 
 
 <!-- * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
@@ -203,11 +205,11 @@ After running the above function, a diabatic representation of your input adiaba
 \end{align*}
 ``` -->
 
-* `input_properties` : a list of strings denoting the object types (e.g. potentials, spin-orbit, dipoles, e.t.c.) input to the program. Useful in the save_diabatisation function.
+* `res.input_properties` : a list of strings denoting the object types (e.g. potentials, spin-orbit, dipoles, e.t.c.) input to the program. Useful in the save_diabatisation function.
 
-* `residual_kinetic_energy` : a vector of matrix norms of the transformed adiabatic kinetic energy. The smaller these elements, the more rigorous the diabatising transformation (i.e. how much of the NAC has been transformed away).
+* `res.residual_kin` : a vector of matrix norms of the transformed adiabatic kinetic energy. The smaller these elements, the more rigorous the diabatising transformation (i.e. how much of the NAC has been transformed away).
 
-* `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
+* `res.H` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
