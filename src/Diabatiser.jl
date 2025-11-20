@@ -1428,7 +1428,7 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     #
     ## minimiser options 
     options = Optim.Options(
-    x_tol = 1e-4,
+    x_abstol = 1e-4,
     show_trace = true
     )
     #
