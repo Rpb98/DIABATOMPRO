@@ -835,7 +835,7 @@ Ryan Brady - ryan.brady.17@ucl.ac.uk
 
 [![Product Name Screen Shot][group]](https://www.exomol.com/)
 
-My name is Ryan, I am a third yeard PhD student at the ExoMol group (UCL). ExoMol is a database of molecular line lists that can be used for spectral characterisation and simulation - and as input to atmospheric models of exoplanets - of brown dwarfs and cool stars, and other models including those for combustion and sunspots. The ExoMol format and database is described in the recent article, [The 2024 release of the ExoMol database: Molecular line lists for exoplanet and other hot atmospheres](https://www.sciencedirect.com/science/article/pii/S0022407324001900). All the code used in the ExoMol group can be found at the [github repository here](https://github.com/ExoMol).
+My name is Ryan, I am a postdoctoral researcher at the ExoMol group (UCL). ExoMol is a database of molecular line lists that can be used for spectral characterisation and simulation - and as input to atmospheric models of exoplanets - of brown dwarfs and cool stars, and other models including those for combustion and sunspots. The ExoMol format and database is described in the recent article, [The 2024 release of the ExoMol database: Molecular line lists for exoplanet and other hot atmospheres](https://www.sciencedirect.com/science/article/pii/S0022407324001900). All the code used in the ExoMol group can be found at the [github repository here](https://github.com/ExoMol).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
