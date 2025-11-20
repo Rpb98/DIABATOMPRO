@@ -4,6 +4,27 @@ module DIABATOMPRO
 # using PyPlot
 # const plt = PyPlot
 #
+struct DiabatisationResult
+    U
+    adiabatic
+    diabatic
+    input_properties
+    residual_kin
+    H
+end
+
+# Tell Julia how to print this object nicely
+function Base.show(io::IO, x::DiabatisationResult)
+    println(io, "✅ Diabatisation Complete.")
+    println(io, "   • Results stored in output object. Access via:")
+    println(io, "       .U = AtDT")
+    println(io, "       .adiabatic = Adiabatic Property Dictionary")
+    println(io, "       .diabatic = Diabatic Property Dictionary")
+    println(io, "       .input_properties = list of Electronic strucure properties input by user")
+    println(io, "       .residual_kin = vector of residual kinetic energy matrix norms")
+    println(io, "       .H = Total Hamiltonian Dictionary")
+end
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LIBRARIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 include("dependencies.jl")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ATOMIC MASSES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -92,7 +113,7 @@ function Diabatise(fname; save_flag = false, special_name = "")
     end
     #
     ## return the AtDT, adiabatic and diabatic matrix objects, diabatic basis, and Hamiltonians
-    return U, Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian
+    return DiabatisationResult(U, Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian)
 end
 end
 
