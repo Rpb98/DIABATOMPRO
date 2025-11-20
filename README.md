@@ -177,7 +177,7 @@ After installing the package, here's an example of how to run the main function:
 using DIABATOMPRO
 
 # Example of using the main function
-U, Adiabatic_Objects, Diabatic_Objects, Diabatic_Basis, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
+U, Adiabatic_Objects, Diabatic_Objects, input_properties, residual_kinetic_energy, Hamiltonian = Diabatise("path/to/input-file.inp", save_flag = true , special_name = "test01")
 ```
 After running the above function, a diabatic representation of your input adiabatic system should be computed. Please see a comprehensive guide below for more details. The function has the following inpit & output syntax:
 
@@ -195,13 +195,17 @@ After running the above function, a diabatic representation of your input adiaba
 
 * `Diabatic_Objects` : a dictionary of diabatic property matrices, each of shape 
 
-* `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
+<!-- * `Diabatic_Basis` : a vector of size $N$, each element corresponding to the r-dependent basis coefficients in the adiabatic basis, 
 
 ```math
 \begin{align*}
 \ket{\psi^{\rm(d)}_i}=\sum^N_j\mathcal{C}_{ij}\ket{\psi^{\rm(a)}_j}
 \end{align*}
-```
+``` -->
+
+* `input_properties` : a list of strings denoting the object types (e.g. potentials, spin-orbit, dipoles, e.t.c.) input to the program. Useful in the save_diabatisation function.
+
+* `residual_kinetic_energy` : a vector of matrix norms of the transformed adiabatic kinetic energy. The smaller these elements, the more rigorous the diabatising transformation (i.e. how much of the NAC has been transformed away).
 
 * `Hamiltonian` : a dictionary of Hamiltonian elements, each a structs which holds information about the adiabatic objects defined in the input file.
 
