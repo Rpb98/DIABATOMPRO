@@ -2460,7 +2460,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                         if diabMethod == "evolution"
                                             write_NAC(io,r, i, j, Objects["regularised_nac"])
                                         else
-                                            write_NAC(io,r, i, j, NACMat)
+                                            write_NAC(io,r, i, j, Objects["nac"])
                                         end
                                     end
                                 end
@@ -2589,7 +2589,7 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                         if diabMethod == "evolution"
                                             df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = [Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)]
                                         else
-                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = NACMat[:,i,j]
+                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = Objects["nac"][:,i,j]
                                         end
                                     end
                                 end
