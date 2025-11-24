@@ -566,6 +566,18 @@ end
 #
 ## Open the input file for reading
 function read_file(fname)
+    #
+    empty!(Hamiltonian)
+    empty!(Potential)
+    empty!(SpinOrbit)
+    empty!(EAMC)
+    empty!(Dipole)
+    empty!(NonAdiabaticCoupling)
+    empty!(SwitchingFunction)
+    empty!(Calculation)
+    empty!(abinitio)
+    empty!(SpectroscopicConstants)
+    #
     open(fname) do f
         # numberOfLines = countlines(fname)
         #

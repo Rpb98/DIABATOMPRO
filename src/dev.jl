@@ -38,7 +38,7 @@ print("\n")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 read_file("../Supplementary/CH/2state_CH.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
-# include("Build_Hamiltonian_Matrix.jl")
+include("Build_Hamiltonian_Matrix.jl")
 Objects = build_hamiltonian_objects(Calculation, 
                                                Potential, 
                                                SpinOrbit, 
