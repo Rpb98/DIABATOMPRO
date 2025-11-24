@@ -29,25 +29,22 @@ end
 #
 ## Initialise the Hamiltonian and sub-Hamiltonians as a dictionary of object 
 ## classes
-Hamiltonian               = Dict{Tuple{String, Any}, Any}()
-Potential                 = Dict{Int, Any}()
-SpinOrbit                 = Dict{Any, Any}()
-EAMC                      = Dict{Any, Any}()
-Dipole                    = Dict{Any, Any}()
-NonAdiabaticCoupling      = Dict{Any, Any}()
-SwitchingFunction         = Dict{Any, Any}()
+global Hamiltonian               = Dict{Tuple{String, Any}, Any}()
+global Potential                 = Dict{Int, Any}()
+global SpinOrbit                 = Dict{Any, Any}()
+global EAMC                      = Dict{Any, Any}()
+global Dipole                    = Dict{Any, Any}()
+global NonAdiabaticCoupling      = Dict{Any, Any}()
+global SwitchingFunction         = Dict{Any, Any}()
 #
 ## Intitialise the Calculation dictionary which defines hyper parameters
-Calculation          = Dict{String, Any}()
+global Calculation               = Dict{String, Any}()
 #
 ## ab initio classes
-abinitio = Dict{Any, Any}()
+global abinitio = Dict{Any, Any}()
 #
 ## spectroscopic constants class
-SpectroscopicConstants    = Dict{Int, Any}()
-#
-## make the Hamiltonians global quantities
-global Hamiltonian, Potential, SpinOrbit, EAMC, Dipole, NonAdiabaticCoupling, Calculation, abinitio, SwitchingFunction, SpectroscopicConstants
+global SpectroscopicConstants    = Dict{Int, Any}()
 #
 function process_line(line::String)::String
     #
