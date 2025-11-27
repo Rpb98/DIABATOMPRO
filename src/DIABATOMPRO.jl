@@ -79,7 +79,7 @@ function Diabatise(fname; save_flag = false, special_name = "")
     #
     # Warning for specific versions
     if VERSION < v"1.6.7"
-        @warn "You are using Julia $VERSION. DIABATOMPRO is tested on 1.6.7+. Some features may fail."
+        @warn "You are using Julia $VERSION. DIABATOMPRO is tested on 1.6.7, 1.12. Some features may fail."
     end
     #
     #~~~~~~~~~~~~~~~~~~~~~~~ RUN DIABATISATION PIPELINES ~~~~~~~~~~~~~~~~~~~~~~#

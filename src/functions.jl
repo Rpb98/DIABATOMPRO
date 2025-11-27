@@ -1455,6 +1455,14 @@ function fit_abinitio()
             ## compute fitted curve
             x, fitted_object = ComputeProperty_viaParameters(r, func, Lval, p, key[1], units, sub_type, factor)
             #
+            println()
+            println("__RESULT FROM FIT OF ", fitting_object.name,"__")
+            p_names = fitting_object.Lval
+            for (idx,param) in enumerate(p)
+                println(p_names[idx]," = ",param)
+            end
+            println()
+            #
             ## plot fitted curve
             plt.figure()
             plt.title("<"*string(i)*"|"*key[1]*"|"*string(j)*">")

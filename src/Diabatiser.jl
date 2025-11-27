@@ -366,6 +366,14 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                         U[:,j,j] .= c
                         U[:,i,j] .= -s
                         U[:,j,i] .= s
+                        #
+                        ## print fitting results
+                        println()
+                        println("__PROPERTY BASED DIABATISATION FITTING RESULTS FOR ",NonAdiabaticCoupling[key].name,"__")
+                        for (idx, param) in enumerate(optimisedParameters)
+                            println(Lval[idx]," = ",param)
+                        end
+                        println()
                 end
             end
     end
@@ -978,7 +986,12 @@ function regularise_old(rgrid, Uf, Ub, Va, dim, order, region; DENSE_GRID_OBJECT
 
 end
 #
-function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, Va, dim::Int64, region::Vector{Float64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
+function regularise(rgrid::AbstractVector{Float64}, 
+                    Uf::AbstractArray{Float64}, 
+                    Va, 
+                    dim::Int64, 
+                    region::Vector{Float64},
+                    renumbered_states::Dict{Int64, Int64}; DENSE_GRID_OBJECTS = false, µ = 0.01)::Tuple{Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}},Vector{Matrix{Float64}}}
     rgrid = collect(rgrid)
     #                  
     ######################### FUNCTIONS FOR SUBROUTINE #########################
@@ -1360,34 +1373,36 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     fitting_states = []
     #
     ## set user defined parameters
+    renumbered_states = Dict(value => key for (key, value) in renumbered_states)
+    # println("CATS", renumbered_states)
     for i=1:dim
         for j=i+1:dim
             row_col_counter += 1
             #
             ## check if switching function is defined by user
-            if [i,j] in keys(SwitchingFunction)
-                param_ij = SwitchingFunction[[i,j]].Rval                        # set parameters to user defined ones
+            if [renumbered_states[i],renumbered_states[j]] in keys(SwitchingFunction)
+                param_ij = SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].Rval                        # set parameters to user defined ones
             else 
-                println(row_col_counter)                                                              # use a black box initialiser
-                switch_ij = SWITCH([i,j],
+                # use a black box initialiser
+                switch_ij = SWITCH([renumbered_states[i],renumbered_states[j]],
                                     "switch",
                                     ["g0", "r0","p","beta2","beta4","B0","B1","B2"],
                                     [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0],
-                                    [1,1,0,0,0,1,1,1],
-                                    [[g0[row_col_counter]*0.99,1e100],r0_bounds[row_col_counter],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100][-1e100,1e100],[-1e100,1e100]],
+                                    [0,0,0,0,0,0,0,0],
+                                    [[g0[row_col_counter]*0.99,1e100],r0_bounds[row_col_counter],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100],[-1e100,1e100]],
                                     [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
                                    )
                 #
-                SwitchingFunction[[i,j]] = switch_ij
+                SwitchingFunction[[renumbered_states[i],renumbered_states[j]]] = switch_ij
                 #
                 param_ij = [g0[row_col_counter], r0[row_col_counter], 4, 0.1, 0.02, 1, 0, 0]
             end
             #
             #
             ## set sensible bounds to function parameters
-            if (SwitchingFunction[[i,j]].bounds[1] == [-1e100, 1e100])&(SwitchingFunction[[i,j]].bounds[2] == [-1e100, 1e100])
-                SwitchingFunction[[i,j]].bounds[1] = [0, 1e100]                     # width parameter: γ ∈ [0,infinity]
-                SwitchingFunction[[i,j]].bounds[2] = [region...]                    # position: r0 ∈ [rmin, rmax]
+            if (SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].bounds[1] == [-1e100, 1e100])&(SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].bounds[2] == [-1e100, 1e100])
+                SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].bounds[1] = [0, 1e100]                     # width parameter: γ ∈ [0,infinity]
+                SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].bounds[2] = [region...]                    # position: r0 ∈ [rmin, rmax]
             end
             #
             ## number of total parameters for switching function
@@ -1400,7 +1415,7 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
             push!(param_idx,parameter_idx_splicer(Nparams,row_col_counter))
             #
             ## find which parameters remain fixed and which are to be fitted
-            fit_flag = SwitchingFunction[[i,j]].fit
+            fit_flag = SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].fit
             fitting_parameters_ij = []
             Nfit_ij = 0
             #
@@ -1440,8 +1455,8 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
                                 Kf, 
                                 Kb,
                                 dim, 
-                                [SwitchingFunction[[i,j]].bounds for i=1:dim for j=i+1:dim],
-                                [SwitchingFunction[[i,j]].fit for i=1:dim for j=i+1:dim],
+                                [SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].bounds for i=1:dim for j=i+1:dim],
+                                [SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].fit for i=1:dim for j=i+1:dim],
                                 param_idx,
                                 params_total,
                                 fitting_states,
@@ -1480,7 +1495,7 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
                 flag_counter = 0
                 #
                 ## now set the parameters
-                for (idx, flag) in enumerate(SwitchingFunction[[i,j]].fit)
+                for (idx, flag) in enumerate(SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].fit)
                     if flag == 1
                         flag_counter += 1
                         param_ij[idx] = fitted_param_ij[flag_counter]
@@ -1488,19 +1503,28 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
                 end
             end
             #
-            SwitchingFunction[[i,j]].fitted_parameters = param_ij
+            SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].fitted_parameters = param_ij
             #
             ## print the parameters for the user
-            println("< ",i," | F | ",j," > :")
+            println("< ",renumbered_states[i]," | F | ",renumbered_states[j]," > :")
             println("---------------")
-            println("g0_"   , i, j, " = ", param_ij[1])
-            println("r0_"   , i, j, " = ", param_ij[2])
-            println("p_"    , i, j, " = ", param_ij[3])
-            println("beta2_", i, j, " = ", param_ij[4])
-            println("beta4_", i, j, " = ", param_ij[5])
+            println("switch ",renumbered_states[i]," ",renumbered_states[j])
+            println("values")
+            println("   g0     ", param_ij[1])
+            println("   r0     ", param_ij[2])
+            println("   p      ", param_ij[3])
+            println("   beta2  ", param_ij[4])
+            println("   beta4  ", param_ij[5])
+
+            # println("g0_"   , renumbered_states[i], renumbered_states[j], " = ", param_ij[1])
+            # println("r0_"   , renumbered_states[i], renumbered_states[j], " = ", param_ij[2])
+            # println("p_"    , renumbered_states[i], renumbered_states[j], " = ", param_ij[3])
+            # println("beta2_", renumbered_states[i], renumbered_states[j], " = ", param_ij[4])
+            # println("beta4_", renumbered_states[i], renumbered_states[j], " = ", param_ij[5])
             for d=1:lastindex(param_ij[6:end])
-                println("B", d-1, " = ", param_ij[6:end][d])
+                println("   B", d-1, "     ", param_ij[6:end][d])
             end
+            println("end")
             println()
         end
     end
@@ -1529,7 +1553,7 @@ function regularise(rgrid::AbstractVector{Float64}, Uf::AbstractArray{Float64}, 
     for i=1:dim
         for j=i+1:dim
             #
-            param_ij = SwitchingFunction[[i,j]].fitted_parameters
+            param_ij = SwitchingFunction[[renumbered_states[i],renumbered_states[j]]].fitted_parameters
             #
             g0_ij    = param_ij[1]
             r0_ij    = param_ij[2]
@@ -1747,6 +1771,7 @@ function N_state_diabatisation(block)
             #
             r_boundary_condition = find_closest_permutation(Uf[end,:,:], dim)
         else
+            println("TEST",Calculation["method"].r_boundary_condition)
             r_boundary_condition = Calculation["method"].r_boundary_condition
         end
         #
@@ -1795,7 +1820,8 @@ function N_state_diabatisation(block)
                                                           SplineMat(rsolve, Uf, r),  
                                                           Pa, 
                                                           dim, 
-                                                          [r[1], r[end]], 
+                                                          [r[1], r[end]],
+                                                          renumbered_states,
                                                           DENSE_GRID_OBJECTS = [rsolve, Uf])
             #
             # UdU = UdU_ #W_regularised
@@ -2584,19 +2610,25 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                     df_W[!,"R"] = r
                     for i=1:dim
                         for j=i:dim
-                                if i != j
-                                    if ("NAC",[i,j]) in keys(Hamiltonian) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
-                                        if diabMethod == "evolution"
-                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = [Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)]
-                                        else
-                                            df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = Objects["nac"][:,i,j]
-                                        end
+                            if i != j
+                                if (("NAC",[i,j]) in keys(Hamiltonian)) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
+                                    if diabMethod == "evolution"
+                                        df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = [Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)]
+                                    else
+                                        df_W[!,"<"*string(i)*"|d/dr|"*string(j)*">"] = Objects["nac"][:,i,j]
+                                    end
+                                elseif (("NAC",[j,i]) in keys(Hamiltonian)) #(i in Calculation["method"].states)&(j in Calculation["method"].states)
+                                    if diabMethod == "evolution"
+                                        df_W[!,"<"*string(j)*"|d/dr|"*string(i)*">"] = [Objects["regularised_nac"][idx][j,i] for idx=1:lastindex(r)]
+                                    else
+                                        df_W[!,"<"*string(j)*"|d/dr|"*string(i)*">"] = Objects["nac"][:,j,i]
                                     end
                                 end
-                                #
-                                if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                                    df_W[!,"<dΨ"*string(i)*"/dr|dΨ"*string(j)*"/dr>"] = [Objects["K_matrix"][idx][i,j] for idx=1:lastindex(r)] .* kinetic_factor
-                                end
+                            end
+                            #
+                            if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+                                df_W[!,"<dΨ"*string(i)*"/dr|dΨ"*string(j)*"/dr>"] = [Objects["K_matrix"][idx][i,j] for idx=1:lastindex(r)] .* kinetic_factor
+                            end
                         end
                     end
                     #
@@ -2613,6 +2645,12 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                     df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Objects["spin-orbit"][:,i,j]
                                 else
                                     df_SO[!,"<"*string(i)*"|SO|"*string(j)*">"] = Diabatic_Objects["spin-orbit"][:,i,j]
+                                end
+                            elseif ("spin-orbit",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    df_SO[!,"<"*string(j)*"|SO|"*string(i)*">"] = Objects["spin-orbit"][:,j,i]
+                                else
+                                    df_SO[!,"<"*string(j)*"|SO|"*string(i)*">"] = Diabatic_Objects["spin-orbit"][:,j,i]
                                 end
                             end
                         end
@@ -2632,7 +2670,13 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                 else
                                     df_DM[!,"<"*string(i)*"|DM|"*string(j)*">"] = Diabatic_Objects["dipole"][:,i,j]
                                 end
-                            end
+                            elseif ("dipole",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    df_DM[!,"<"*string(j)*"|DM|"*string(i)*">"] = Objects["dipole"][:,j,i]
+                                else
+                                    df_DM[!,"<"*string(j)*"|DM|"*string(i)*">"] = Diabatic_Objects["dipole"][:,j,i]
+                                end
+                            end    
                         end
                     end
                     #
@@ -2649,6 +2693,12 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
                                     df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Objects["lx"][:,i,j]
                                 else
                                     df_LX[!,"<"*string(i)*"|Lx|"*string(j)*">"] = Diabatic_Objects["lx"][:,i,j]
+                                end
+                            elseif ("LX",[j,i]) in keys(Hamiltonian)
+                                if rep == "adi"
+                                    df_LX[!,"<"*string(j)*"|Lx|"*string(i)*">"] = Objects["lx"][:,j,i]
+                                else
+                                    df_LX[!,"<"*string(j)*"|Lx|"*string(i)*">"] = Diabatic_Objects["lx"][:,j,i]
                                 end
                             end
                         end

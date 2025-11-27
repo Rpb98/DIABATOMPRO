@@ -1,6 +1,6 @@
 grid                
   npoints 301
-  range   1.1 6.0    
+  range   1.2 6.0    
   interpolation_type  cubic
 end
 

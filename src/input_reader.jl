@@ -106,7 +106,7 @@ function initialise_input_parameters(line::String)
     #
     input_values["r_boundary_condition"] = false
     #
-    # input_values["N_evo_grid_points"] = 50000
+    input_values["N_evo_grid_points"] = 50000
     #
     input_values["save"] = "false" 
     #

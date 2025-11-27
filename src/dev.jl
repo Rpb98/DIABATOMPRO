@@ -36,7 +36,7 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-read_file("../Supplementary/CH/2state_CH.inp")
+read_file("./CN.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Build_Hamiltonian_Matrix.jl")
 Objects = build_hamiltonian_objects(Calculation, 
@@ -73,10 +73,24 @@ elseif Calculation["method"].abinitio_fit == false
             axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
         end
     end
-    axs[2,1].plot(r,Objects["nac"][:,1,2])
+    #
+    for i=1:dim
+        for j=i+1:dim
+            if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+                axs[2,1].plot(r,Objects["nac"][:,i,j])
+                # if (lowercase(Calculation["method"].diabatisation) == "evolution")
+                #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
+                # end
+            end
+        end
+    end
     axs[2,1].set_xlabel("Bond Length, Angstrom")
     axs[2,1].set_ylabel("NAC, 1/Angstrom")
     axs[1,1].set_ylabel("Potential, cm-1")
+    axs[2,1].legend()
+
+    axs[1,1].set_ylim(50000,85000)
+    axs[1,1].set_xlim(1,1.5)
 
 
     # plt.figure()
@@ -94,7 +108,7 @@ end
 # print(Objects["potential"][1,:,:])
 
 
-save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "KH_ai", special_name = "2-state-CH")
+save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "SO", special_name = "save_test")
 
 # plt.figure()
 # plt.plot(r,Objects["spin-orbit"][:,1,3],"--")
