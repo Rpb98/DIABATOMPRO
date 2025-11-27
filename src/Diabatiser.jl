@@ -1592,6 +1592,7 @@ function regularise(rgrid::AbstractVector{Float64},
     ######### PLOTTING THE GENERATOR MATRICES AND SWITCHING FUNCTIONS ##########
     #
     if isdefined(Main, Symbol("PyPlot"))
+        plt=Main.plt
         #
         fig = plt.figure()
         gs = fig.add_gridspec(dim,dim)
