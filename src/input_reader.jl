@@ -13,7 +13,7 @@ end
 function remove_comment(str::AbstractString)::String
     # Define regular expression pattern to match substrings enclosed in 
     # parentheses
-    pattern = r"\([^)]*\)"
+    pattern = r"\(.*" #r"\([^)]*\)"
     # Replace all matched substrings with an empty string
     return replace(str, pattern => "")
 end
@@ -24,6 +24,35 @@ function message(str::AbstractString)
         # print(str,"\n")
         # print(" ***Morphing is not implemented as of version 1.0. \n")
         return true
+    end
+end
+#
+function parse_factor(factor::AbstractString)
+    s = strip(factor)
+
+    imag_pattern = r"([+-]?(?:\d+(?:\.\d*)?)?)\s*i"
+
+    m = match(imag_pattern, s)
+    if m !== nothing
+        coef = m.captures[1]
+
+        if coef == "" || coef == "+"
+            coef_str = "1"
+        elseif coef == "-"
+            coef_str = "-1"
+        else
+            coef_str = coef
+        end
+
+        val = parse(Float64, coef_str)
+        return (val, true)
+    end
+
+    try
+        val = parse(Float64, s)
+        return (val, false)
+    catch e
+        error("Could not parse factor as a pure real or pure imaginary scalar: \"$(factor)\"")
     end
 end
 #
@@ -202,6 +231,16 @@ function add_key_value_pair(input_values::Dict{Any,Any}, key::String, value::Any
         end
         input_values[lowercase(key)] = M
     #
+    elseif occursin("factor",key)
+        if size(value)[1] <= 2
+            input_values["factor"] = join(value," ")
+        elseif size(value)[1] > 2
+            error("Factor cannot have more than 2 elements! Received value: $value")
+        # elseif 
+        #     input_values["factor"] = value
+        #     println(typeof(value))
+        end
+    #
     elseif lowercase(key) == "jrot"
         input_values[lowercase(key)] = join(value)
     elseif lowercase(key) == "vmax"
@@ -340,6 +379,9 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         end
         #
         ##
+        factor, is_imaginary = parse_factor(input_values["factor"])
+        #
+        ##
         object = SOC(parse.(Int,input_values["id"]),
                      input_values["name"],
                      "SOC",
@@ -349,10 +391,12 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                      input_values["<x|lz|y>"],
                      input_values["type"],
                      input_values["units"],
-                     parse.(Float64,input_values["factor"]),
+                     factor,
                      input_values["Lval"],
                      input_values["Rval"],
-                     input_values["sub-types"])
+                     input_values["sub-types"],
+                     is_imaginary)
+        #  parse.(Float64,input_values["factor"])
         #
         SpinOrbit[object.ID]=object
         #
@@ -367,6 +411,8 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
             input_values["Lval"] = parse.(Float64,input_values["Lval"])
         end
         #
+        factor, is_imaginary = parse_factor(input_values["factor"])
+        #
         object = DM(parse.(Int,input_values["id"]),
                     input_values["name"],
                     "DM",
@@ -375,10 +421,11 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                     input_values["<x|lz|y>"],
                     input_values["type"],
                     input_values["units"],
-      parse(Float64,input_values["factor"]),
+                    factor,
                     input_values["Lval"],
                     input_values["Rval"],
-                    input_values["sub-types"]) 
+                    input_values["sub-types"],
+                    is_imaginary) 
         #
         Dipole[object.ID]=object
         #
@@ -393,6 +440,9 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
             input_values["Lval"] = parse.(Float64,input_values["Lval"])
         end
         #
+        factor, is_imaginary = parse_factor(input_values["factor"])
+        #
+        println(input_values["id"]," ",input_values["factor"]," ",factor, " ",is_imaginary)
         object = LX(parse.(Int,input_values["id"]),
                     input_values["name"],
                     "LX",
@@ -401,10 +451,11 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
                     input_values["<x|lz|y>"],
                     input_values["type"],
                     input_values["units"],
-      parse(Float64,input_values["factor"]),
+                    factor,
                     input_values["Lval"],
                     input_values["Rval"],
-                    input_values["sub-types"]) 
+                    input_values["sub-types"],
+                    is_imaginary) 
         #
         EAMC[object.ID]=object
         #
@@ -428,6 +479,7 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
             input_values["Lval"] = parse.(Float64,input_values["Lval"])
         end
         #
+        println("CATS", input_values["id"]," ",input_values["factor"])
         object = NAC(parse.(Int,input_values["id"]),
                      input_values["name"],
                      "NAC",

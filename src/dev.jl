@@ -36,7 +36,7 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-read_file("./CN.inp")
+read_file("./andrei_CN_lx.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Build_Hamiltonian_Matrix.jl")
 Objects = build_hamiltonian_objects(Calculation, 
@@ -67,12 +67,21 @@ elseif Calculation["method"].abinitio_fit == false
    
     fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
     plt.subplots_adjust(wspace=0, hspace=0)
-    for i=1:dim
-        if i in Calculation["method"].states
-            axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-            axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-        end
+    # for i=1:dim
+    #     if i in Calculation["method"].states
+    #         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+    #         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+    #     end
+    # end
+    #
+    for j=16:17
+        axs[1,1].plot(r,Diabatic_Objects["lx"][:,13,j],label="dia 13|"*string(j))
+        axs[1,1].plot(r,Objects["lx"][:,13,j],"--",label="adi 13|"*string(j))
+        #
+        axs[1,1].plot(r,Diabatic_Objects["lx"][:,14,j],label="dia 14|"*string(j))
+        axs[1,1].plot(r,Objects["lx"][:,14,j],"--",label="adi 14|"*string(j))
     end
+    axs[1,1].legend()
     #
     for i=1:dim
         for j=i+1:dim
@@ -89,8 +98,8 @@ elseif Calculation["method"].abinitio_fit == false
     axs[1,1].set_ylabel("Potential, cm-1")
     axs[2,1].legend()
 
-    axs[1,1].set_ylim(50000,85000)
-    axs[1,1].set_xlim(1,1.5)
+    # axs[1,1].set_ylim(50000,85000)
+    # axs[1,1].set_xlim(1,1.5)
 
 
     # plt.figure()
@@ -108,7 +117,7 @@ end
 # print(Objects["potential"][1,:,:])
 
 
-save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "SO", special_name = "save_test")
+save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "CN", special_name = "save_test")
 
 # plt.figure()
 # plt.plot(r,Objects["spin-orbit"][:,1,3],"--")

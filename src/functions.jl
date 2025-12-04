@@ -1463,14 +1463,18 @@ function fit_abinitio()
             end
             println()
             #
-            ## plot fitted curve
-            plt.figure()
-            plt.title("<"*string(i)*"|"*key[1]*"|"*string(j)*">")
-            plt.plot(x_ai, y_ai, label = "abinitio")
-            plt.plot(x, fitted_object, label = "fitted")
-            # plt.xlim(x[1],x[end])
-            plt.xlim(xi,xf)
-            plt.legend()
+            if isdefined(Main, Symbol("PyPlot"))
+                plt=Main.plt
+                #
+                ## plot fitted curve
+                plt.figure()
+                plt.title("<"*string(i)*"|"*key[1]*"|"*string(j)*">")
+                plt.plot(x_ai, y_ai, label = "abinitio")
+                plt.plot(x, fitted_object, label = "fitted")
+                # plt.xlim(x[1],x[end])
+                plt.xlim(xi,xf)
+                plt.legend()
+            end
         end
     end
 end

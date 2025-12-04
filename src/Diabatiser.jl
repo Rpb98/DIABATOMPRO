@@ -1285,12 +1285,13 @@ function regularise(rgrid::AbstractVector{Float64},
         return sigmoid(r, gL, rLmid)*(1 - sigmoid(r, gR, rRmid))
     end
     #
-    function initialise_switches_black_box(∂K, rgrid)
+    function initialise_switches_black_box_old(∂K, rgrid)
         #
         ## find average of peak positions (the elements are closest) to set the sigmoid centres
         r0 = []
         r0_bounds = []
         g0 = []
+        #
         for i=1:dim
             for j=i+1:dim
                 if [i,j] ∉ keys(SwitchingFunction)
@@ -1331,6 +1332,39 @@ function regularise(rgrid::AbstractVector{Float64},
         return g0, r0, r0_bounds, g_guess
     end
     #
+    function initialise_switches_black_box(∂K, rgrid, i, j)
+        local r0, r0_bounds, g0
+        #
+        ## find average of peak positions (the elements are closest) to set the sigmoid centres
+        #
+        ## compute position where f & b generator elements vary the quickest
+        ∂Kij = [d[i,j] for d in ∂K]
+        deriv_∂Kij  = FiniteDifference(rgrid, ∂Kij, 1)
+        ij_peak_idx = argmax(abs.(deriv_∂Kij))
+        r0 = rgrid[ij_peak_idx]
+        #
+        ## compute HWHM of this for fitting range
+        deriv_∂Kij_peak   = maximum(abs.(deriv_∂Kij))
+        # println(deriv_∂Kij_peak,deriv_∂Kij)
+        # plt.figure()
+        # plt.plot(r,deriv_∂Kij)
+        #
+        HWHM_end_idx   = ij_peak_idx + (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in deriv_∂Kij[ij_peak_idx:end]]) - 1) - 1
+        HWHM_start_idx = length(reverse(∂Kij[1:ij_peak_idx])) - (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in reverse(deriv_∂Kij[1:ij_peak_idx]) ]) - 1) + 1
+        #
+        r0_bounds = [rgrid[HWHM_start_idx], rgrid[HWHM_end_idx]]
+        #
+        ## now estimate mimimum value for gamma
+        g_thresh_left  = [gamma_sigmoid(region[1],     µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[1],     µ, r0[end]), gamma_sigmoid(region[1],     µ, rgrid[HWHM_end_idx])]
+        g_thresh_right = [gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[2],   1-µ, r0[end]), gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_end_idx])]
+        #
+        g0 = maximum([g_thresh_left..., g_thresh_right...])
+        #
+        # g_guess = [g0...,r0...]
+        #
+        return g0, r0, r0_bounds #, g_guess
+    end
+    #
     ################## INITIALISATION OF ROUTINE PARAMETERS ####################
     #
     ## convert matrices to vector format
@@ -1356,8 +1390,32 @@ function regularise(rgrid::AbstractVector{Float64},
     Kb = real(log.(Ub))
     ∂K = Kf .- Kb
     #
-    ## initialise switching function parameters
-    g0, r0, r0_bounds, g_guess = initialise_switches_black_box(∂K,rgrid) # black box initialisation
+    ## initialise switching function parameters  
+    # g0, r0, r0_bounds, g_guess = initialise_switches_black_box_old(∂K,rgrid) # black box initialisation
+    #
+    renumbered_states = Dict(value => key for (key, value) in renumbered_states)
+    #
+    r0 = []
+    r0_bounds = []
+    g0 = []
+    #
+    for i=1:dim
+        for j=i+1:dim
+            if [renumbered_states[i],renumbered_states[j]] in keys(NonAdiabaticCoupling)
+                g0_, r0_, r0_bounds_ = initialise_switches_black_box(∂K,rgrid,i,j) # black box initialisation
+                #
+                push!(r0,r0_)
+                push!(r0_bounds,r0_bounds_)
+                push!(g0,g0_)
+            else
+                push!(r0, mean(region))
+                push!(r0_bounds, [-1e100,1e100])
+                push!(g0, 1e-16)
+            end
+        end
+    end
+    #
+    g_guess = [g0...,r0...]
     #
     ## row/column counter, e.g. 1,2,3,... -> [1,2], [1,3], ... , [2,3],[2,4], ...
     row_col_counter = 0
@@ -1373,8 +1431,6 @@ function regularise(rgrid::AbstractVector{Float64},
     fitting_states = []
     #
     ## set user defined parameters
-    renumbered_states = Dict(value => key for (key, value) in renumbered_states)
-    # println("CATS", renumbered_states)
     for i=1:dim
         for j=i+1:dim
             row_col_counter += 1
@@ -1444,7 +1500,8 @@ function regularise(rgrid::AbstractVector{Float64},
     ## minimiser options 
     options = Optim.Options(
     x_abstol = 1e-4,
-    show_trace = true
+    show_trace = true,
+
     )
     #
     ##################### FITTING THE SWITCHING FUNCTIONS ######################
@@ -1861,7 +1918,7 @@ function run_diabatiser(diabMethod)
     dim = length(keys(Potential))
     # perform the diabatisation
     if (lowercase(diabMethod) == "2-state-approx")|(length(Calculation["method"].states)==2)
-        U = fit_multi_diabat_2stateApprox(r,Objects["potential"]) #Objects[Calculation["method"].regularisation]
+        U =  fit_multi_diabat_2stateApprox(r,Objects[Calculation["method"].regularisation]) #fit_multi_diabat_2stateApprox(r,Objects["potential"])
         #
         UdU = Objects["nac"]
         #
@@ -2265,7 +2322,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         println(io, "lambda " * join(L))
         println(io, "<x|Lz|y> " * join(Lz))
         println(io, "type  grid")
-        println(io, "factor i")
+        #
+        if SO.is_imaginary
+            println(io, "factor i")
+        end
+        #
         println(io, "values")
         #
         for idx=1:size(r)[1]
@@ -2319,7 +2380,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         # println(io, "mult " * join(S))
         println(io, "<x|Lz|y> " * join(Lz))
         println(io, "type  grid")
-        println(io, "factor i")
+        #
+        if Lx.is_imaginary
+            println(io, "factor i")
+        end
+        #
         println(io, "values")
         #
         for idx=1:size(r)[1]
@@ -2399,7 +2464,11 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
             println(io, "<x|Lz|y> " * join(Lz_arr))
         end
         println(io, "type  grid")
-        println(io, "factor 1")
+        #
+        if dm.is_imaginary
+            println(io, "factor i")
+        end
+        #
         println(io, "values")
         #
         for idx=1:size(r)[1]

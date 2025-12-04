@@ -37,6 +37,7 @@ struct SOC
     Lval      :: Array{Any}
     Rval      :: Array{Number}
     sub_type  :: Tuple{String,String,String}
+    is_imaginary :: Bool
 end
 #
 ## create the electronic angular momentum class
@@ -53,6 +54,7 @@ struct LX
     Lval     :: Array{Any}
     Rval     :: Array{Number}
     sub_type :: Tuple{String,String,String}
+    is_imaginary :: Bool
 end 
 #
 ## create the dipole moment class
@@ -69,6 +71,7 @@ struct DM
     Lval     :: Array{Any}
     Rval     :: Array{Number}
     sub_type :: Tuple{String,String,String}
+    is_imaginary :: Bool
 end
 #
 ## Create the NAC class
