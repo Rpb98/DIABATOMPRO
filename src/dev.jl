@@ -65,38 +65,38 @@ if Calculation["method"].abinitio_fit == true
 elseif Calculation["method"].abinitio_fit == false
     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
-    fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
-    plt.subplots_adjust(wspace=0, hspace=0)
+    # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+    # plt.subplots_adjust(wspace=0, hspace=0)
+    # # for i=1:dim
+    # #     if i in Calculation["method"].states
+    # #         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+    # #         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+    # #     end
+    # # end
+    # #
+    # for j=16:17
+    #     axs[1,1].plot(r,Diabatic_Objects["lx"][:,13,j],label="dia 13|"*string(j))
+    #     axs[1,1].plot(r,Objects["lx"][:,13,j],"--",label="adi 13|"*string(j))
+    #     #
+    #     axs[1,1].plot(r,Diabatic_Objects["lx"][:,14,j],label="dia 14|"*string(j))
+    #     axs[1,1].plot(r,Objects["lx"][:,14,j],"--",label="adi 14|"*string(j))
+    # end
+    # axs[1,1].legend()
+    # #
     # for i=1:dim
-    #     if i in Calculation["method"].states
-    #         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-    #         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+    #     for j=i+1:dim
+    #         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+    #             axs[2,1].plot(r,Objects["nac"][:,i,j])
+    #             # if (lowercase(Calculation["method"].diabatisation) == "evolution")
+    #             #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
+    #             # end
+    #         end
     #     end
     # end
-    #
-    for j=16:17
-        axs[1,1].plot(r,Diabatic_Objects["lx"][:,13,j],label="dia 13|"*string(j))
-        axs[1,1].plot(r,Objects["lx"][:,13,j],"--",label="adi 13|"*string(j))
-        #
-        axs[1,1].plot(r,Diabatic_Objects["lx"][:,14,j],label="dia 14|"*string(j))
-        axs[1,1].plot(r,Objects["lx"][:,14,j],"--",label="adi 14|"*string(j))
-    end
-    axs[1,1].legend()
-    #
-    for i=1:dim
-        for j=i+1:dim
-            if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-                axs[2,1].plot(r,Objects["nac"][:,i,j])
-                # if (lowercase(Calculation["method"].diabatisation) == "evolution")
-                #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
-                # end
-            end
-        end
-    end
-    axs[2,1].set_xlabel("Bond Length, Angstrom")
-    axs[2,1].set_ylabel("NAC, 1/Angstrom")
-    axs[1,1].set_ylabel("Potential, cm-1")
-    axs[2,1].legend()
+    # axs[2,1].set_xlabel("Bond Length, Angstrom")
+    # axs[2,1].set_ylabel("NAC, 1/Angstrom")
+    # axs[1,1].set_ylabel("Potential, cm-1")
+    # axs[2,1].legend()
 
     # axs[1,1].set_ylim(50000,85000)
     # axs[1,1].set_xlim(1,1.5)
@@ -114,10 +114,46 @@ elseif Calculation["method"].abinitio_fit == false
 
 end
 
+
+fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+plt.subplots_adjust(wspace=0, hspace=0)
+# for i=1:dim
+#     if i in Calculation["method"].states
+#         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+#         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+#     end
+# end
+#
+
+axs[1,1].plot(r,-Diabatic_Objects["lx"][:,16,14],label="dia 13|"*string(16))
+axs[1,1].plot(r,-Objects["lx"][:,16,14],"--",label="adi 13|"*string(16))
+#
+axs[1,1].plot(r,-Diabatic_Objects["lx"][:,17,14],label="dia 13|"*string(17))
+axs[1,1].plot(r,-Objects["lx"][:,17,14],"--",label="adi 13|"*string(17))
+
+#
+axs[1,1].legend()
+#
+for i=1:dim
+    for j=i+1:dim
+        if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+            axs[2,1].plot(r,Objects["nac"][:,i,j])
+            # if (lowercase(Calculation["method"].diabatisation) == "evolution")
+            #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
+            # end
+        end
+    end
+end
+axs[2,1].set_xlabel("Bond Length, Angstrom")
+axs[2,1].set_ylabel("NAC, 1/Angstrom")
+axs[1,1].set_ylabel("Potential, cm-1")
+axs[2,1].legend()
+
+
 # print(Objects["potential"][1,:,:])
 
 
-save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "CN", special_name = "save_test")
+# save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "CN", special_name = "save_test")
 
 # plt.figure()
 # plt.plot(r,Objects["spin-orbit"][:,1,3],"--")

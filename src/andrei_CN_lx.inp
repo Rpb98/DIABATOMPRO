@@ -1,16 +1,16 @@
 grid                
-  npoints 1501
-  range   1. 4.
+  npoints 101
+  range   1. 1.5
   interpolation_type  cubic
 end
 
 method   
     atoms 12C 14N             
-    states 13 14 16 17
-	diabatisation forward-evolution
+    states 16 17
+	diabatisation 2-state-approximation
 	regularisation lx
     n_evo_grid_points 50000
-    r_boundary_condition 1 0 0 0 0 0 -1 0 0 0 0 -1 0 1 0 0
+    r_boundary_condition 1 0 0 0 0 1 0 0 0 0 0 -1 0 0 1 0 
 end
 
 save
@@ -1182,6 +1182,7 @@ values
     6    72294.94357
 end
 
+
 NAC 16 17
 name <16|d/dr|17>
 spin 1.5 1.5
@@ -1190,57 +1191,144 @@ lambda 1 1
 type lorentzian
 factor 1.0
 values 
-    gamma    0.0071
-    r0       1.176
+    gamma    0.0071 fit 0.005 0.009
+    r0       1.176 fit 1.16 1.182
     N        1.0
 end
 
+switch 16 17
+values
+   g0     10.00
+   r0     1.1760000000000002
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+switch 13 14
+values
+   g0     1.0e-16
+   r0     2.0
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+
+switch 13 16
+values
+   g0     1.0e-16
+   r0     2.0
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+
+switch 13 17
+values
+   g0     1.0e-16
+   r0     2.0
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+switch 14 16
+values
+   g0     1.0e-16
+   r0     2.0
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+
+switch 14 17
+values
+   g0     1.0e-16
+   r0     2.0
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0
+   B1     0.0
+   B2     0.0
+end
+
+
 NAC 5 6
-name <1|d/dr|2>
+name <5|d/dr|6>
 spin 0.5 0.5
 sigma 0.0 0.0
 lambda 1 1
 type lorentzian
 factor 1.0
-values 
+values
     gamma           0.01994189290439265
     r0              1.3041818588313485
     N               1.0
 end
-
-
+ 
+ 
 NAC 6 7
-name <1|d/dr|2>
-spin 0.5 0.5
-sigma 0.0 0.0
-lambda 1 1 
-type lorentzian
-factor 1.0
-values 
-    gamma    0.11210351413662513
-    r0       1.5198606370186125
-    N        1.0
-end
-
-
-NAC 5 7
-name <1|d/dr|3>
+name <6|d/dr|7>
 spin 0.5 0.5
 sigma 0.0 0.0
 lambda 1 1
 type lorentzian
 factor 1.0
-values 
+values
+    gamma    0.11210351413662513
+    r0       1.5198606370186125
+    N        1.0
+end
+ 
+ 
+NAC 5 7
+name <5|d/dr|7>
+spin 0.5 0.5
+sigma 0.0 0.0
+lambda 1 1
+type lorentzian
+factor 1.0
+values
     gamma    0.1
     r0       1.4
     N        0.1
 end
 
-
 switch 5 6
 values
-   g0     11.207609390572172 
-   r0     1.52 
+   g0     7.520654419205548 fit
+   r0     1.5202
+   p      4.0
+   beta2  0.1
+   beta4  0.02
+   B0     1.0 fit
+   B1     0.0
+   B2     0.0
+end
+
+switch 6 7
+values
+   g0     9.400818024006933 fit 
+   r0     1.3044000000000002
    p      4.0
    beta2  0.1
    beta4  0.02
@@ -1251,8 +1339,8 @@ end
 
 switch 5 7
 values
-   g0     16.29475124161202 
-   r0     1.302 
+   g0     9.501902088781202 fit
+   r0     1.3018
    p      4.0
    beta2  0.1
    beta4  0.02
@@ -1260,30 +1348,16 @@ values
    B1     0.0
    B2     0.0
 end
-
-
-switch 6 7
-values
-   g0     15.955277257411769 
-   r0     1.306 
-   p      4.0
-   beta2  0.1
-   beta4  0.02
-   B0     1.0
-   B1     0.0
-   B2     0.0
-end
-
 
 spin-orbit 1 15
-name <x2s|LSZ|14s->     
+name <x2s|LSZ|14s->     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 0 0
 <x|Lz|y>  0 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    18.80166
     1.16    18.91481
@@ -1329,14 +1403,14 @@ values
 end
 
 spin-orbit 2 15
-name <B2s|LSZ|14s->     
+name <B2s|LSZ|14s->     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 0 0
 <x|Lz|y>  0 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    3.71895
     0.95    4.32294
@@ -1388,14 +1462,14 @@ values
 end
 
 spin-orbit 4 4
-name <A2p|LSZ|A2p>     
+name <A2p|LSZ|A2p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    33.87671
     0.95    32.25254
@@ -1447,14 +1521,14 @@ values
 end
 
 spin-orbit 4 5
-name <A2p|LSZ|22p>     
+name <A2p|LSZ|22p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.80339
     0.95    1.19257
@@ -1506,14 +1580,14 @@ values
 end
 
 spin-orbit 4 6
-name <A2p|LSZ|32p>     
+name <A2p|LSZ|32p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.14775
     0.95    -0.44804
@@ -1565,14 +1639,14 @@ values
 end
 
 spin-orbit 4 7
-name <A2p|LSZ|42p>     
+name <A2p|LSZ|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -14.00984
     1.2    -14.34337
@@ -1616,14 +1690,14 @@ values
 end
 
 spin-orbit 4 16
-name <A2p|LSZ|b4p>     
+name <A2p|LSZ|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.55528
     0.95    -0.54683
@@ -1675,14 +1749,14 @@ values
 end
 
 spin-orbit 4 17
-name <A2p|LSZ|24p>     
+name <A2p|LSZ|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.06882
     0.95    -0.3108
@@ -1733,14 +1807,14 @@ values
 end
 
 spin-orbit 5 5
-name <22p|LSZ|22p>     
+name <22p|LSZ|22p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -6.98839
     0.95    -10.30814
@@ -1791,14 +1865,14 @@ values
 end
 
 spin-orbit 5 6
-name <22p|LSZ|32p>     
+name <22p|LSZ|32p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    1.35404
     0.95    2.49606
@@ -1850,14 +1924,14 @@ values
 end
 
 spin-orbit 5 7
-name <22p|LSZ|42p>     
+name <22p|LSZ|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    2.08163
     1.2    2.35382
@@ -1901,14 +1975,14 @@ values
 end
 
 spin-orbit 5 16
-name <22p|LSZ|b4p>     
+name <22p|LSZ|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    1.87111
     0.95    2.98338
@@ -1960,14 +2034,14 @@ values
 end
 
 spin-orbit 5 17
-name <22p|LSZ|24p>     
+name <22p|LSZ|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.9318
     0.95    0.91493
@@ -2017,14 +2091,14 @@ values
 end
 
 spin-orbit 6 6
-name <32p|LSZ|32p>     
+name <32p|LSZ|32p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -2.67124
     1.2    -2.0425
@@ -2068,14 +2142,14 @@ values
 end
 
 spin-orbit 6 7
-name <32p|LSZ|42p>     
+name <32p|LSZ|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    30.30889
     1.2    30.71959
@@ -2119,14 +2193,14 @@ values
 end
 
 spin-orbit 6 16
-name <32p|LSZ|b4p>     
+name <32p|LSZ|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -6.74156
     0.95    -3.21369
@@ -2178,14 +2252,14 @@ values
 end
 
 spin-orbit 6 17
-name <32p|LSZ|24p>     
+name <32p|LSZ|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -1.7852
     0.95    -0.75101
@@ -2237,14 +2311,14 @@ values
 end
 
 spin-orbit 7 7
-name <42p|LSZ|42p>     
+name <42p|LSZ|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -13.55594
     1.2    -14.63603
@@ -2288,14 +2362,14 @@ values
 end
 
 spin-orbit 7 16
-name <42p|LSZ|b4p>     
+name <42p|LSZ|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -40.28304
     1.2    -41.70656
@@ -2339,14 +2413,14 @@ values
 end
 
 spin-orbit 7 17
-name <42p|LSZ|24p>     
+name <42p|LSZ|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 1 1
 <x|Lz|y>  -i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -8.09768
     1.2    -3.69781
@@ -2390,14 +2464,14 @@ values
 end
 
 spin-orbit 8 12
-name <12s-|LSZ|a4s>     
+name <12s-|LSZ|a4s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 0 0
 <x|Lz|y>  0 0 
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    -10.88217
     1.16    -10.11198
@@ -2434,14 +2508,14 @@ values
 end
 
 spin-orbit 8 13
-name <12s-|LSZ|24s>     
+name <12s-|LSZ|24s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 0 0
 <x|Lz|y>  0 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    3.2453
     1.16    3.28647
@@ -2478,14 +2552,14 @@ values
 end
 
 spin-orbit 9 14
-name <12d|LSZ|14d>     
+name <12d|LSZ|14d>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 2 2
 <x|Lz|y>  -2i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -5.30535
     0.95    0.5101
@@ -2537,14 +2611,14 @@ values
 end
 
 spin-orbit 10 14
-name <22d|LSZ|14d>     
+name <22d|LSZ|14d>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 0.5
 lambda 2 2
 <x|Lz|y>  -2i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    3.23963
     0.95    -0.67538
@@ -2596,14 +2670,14 @@ values
 end
 
 spin-orbit 12 15
-name <a4s|LSZ|14s->     
+name <a4s|LSZ|14s->     (Digonal Coupling))
 spin 1.5 1.5
 sigma 1.5 1.5
 lambda 0 0
 <x|Lz|y>  0 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -15.00406
     0.95    -45.28909
@@ -2654,14 +2728,14 @@ values
 end
 
 spin-orbit 13 15
-name <24s|LSZ|14s->     
+name <24s|LSZ|14s->     (Digonal Coupling))
 spin 1.5 1.5
 sigma 1.5 1.5
 lambda 0 0
 <x|Lz|y>  0 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.27542
     1.14    1.97462
@@ -2708,14 +2782,14 @@ values
 end
 
 spin-orbit 14 14
-name <14d|LSZ|14d>     
+name <14d|LSZ|14d>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 1.5 1.5
 lambda 2 2
 <x|Lz|y>  -2i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.06615
     0.95    -0.12945
@@ -2767,14 +2841,14 @@ values
 end
 
 spin-orbit-x 1 4
-name <x2s|LSX|A2p>     
+name <x2s|LSX|A2p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.82606
     0.95    2.35675
@@ -2826,14 +2900,14 @@ values
 end
 
 spin-orbit-x 1 5
-name <x2s|LSX|22p>     
+name <x2s|LSX|22p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    14.45357
     0.95    18.27935
@@ -2841,9 +2915,6 @@ values
     1.05    21.56116
     1.1    22.52035
     1.12    22.77151
-    1.14    22.42163
-    1.16    22.69493
-    1.18    22.97943
     1.2    23.11665
     1.22    23.19784
     1.24    23.18727
@@ -2885,14 +2956,14 @@ values
 end
 
 spin-orbit-x 1 6
-name <x2s|LSX|32p>     
+name <x2s|LSX|32p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.12    0.96082
     1.14    1.28397
@@ -2939,14 +3010,14 @@ values
 end
 
 spin-orbit-x 1 7
-name <x2s|LSX|42p>     
+name <x2s|LSX|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -0.19835
     1.2    -0.57098
@@ -2989,14 +3060,14 @@ values
 end
 
 spin-orbit-x 1 16
-name <x2s|LSX|b4p>     
+name <x2s|LSX|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    19.47557
     0.95    19.35405
@@ -3046,14 +3117,14 @@ values
 end
 
 spin-orbit-x 1 17
-name <x2s|LSX|24p>     
+name <x2s|LSX|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -2.98066
     0.95    -1.31334
@@ -3101,14 +3172,14 @@ values
 end
 
 spin-orbit-x 2 4
-name <B2s|LSX|A2p>     
+name <B2s|LSX|A2p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -24.40203
     0.95    -23.77588
@@ -3160,14 +3231,14 @@ values
 end
 
 spin-orbit-x 2 5
-name <B2s|LSX|22p>     
+name <B2s|LSX|22p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.12    2.39315
     1.14    2.31811
@@ -3214,14 +3285,14 @@ values
 end
 
 spin-orbit-x 2 6
-name <B2s|LSX|32p>     
+name <B2s|LSX|32p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.12    1.2282
     1.14    1.31469
@@ -3268,14 +3339,14 @@ values
 end
 
 spin-orbit-x 2 7
-name <B2s|LSX|42p>     
+name <B2s|LSX|42p>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    1.01297
     1.2    0.667
@@ -3319,14 +3390,14 @@ values
 end
 
 spin-orbit-x 2 16
-name <B2s|LSX|b4p>     
+name <B2s|LSX|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -15.48472
     0.95    -18.20087
@@ -3376,14 +3447,14 @@ values
 end
 
 spin-orbit-x 2 17
-name <B2s|LSX|24p>     
+name <B2s|LSX|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -4.50007
     0.95    -3.11687
@@ -3433,14 +3504,14 @@ values
 end
 
 spin-orbit-x 4 8
-name <A2p|LSX|12s->     
+name <A2p|LSX|12s->     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.05    8.01547
     1.1    10.49366
@@ -3489,14 +3560,14 @@ values
 end
 
 spin-orbit-x 4 9
-name <A2p|LSX|12d>     
+name <A2p|LSX|12d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    2.74625
     0.95    5.67321
@@ -3547,14 +3618,14 @@ values
 end
 
 spin-orbit-x 4 10
-name <A2p|LSX|22d>     
+name <A2p|LSX|22d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.95    3.78121
     1    0.3234
@@ -3605,14 +3676,14 @@ values
 end
 
 spin-orbit-x 4 14
-name <A2p|LSX|14d>     
+name <A2p|LSX|14d>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -8.81526
     0.95    -10.29949
@@ -3664,14 +3735,14 @@ values
 end
 
 spin-orbit-x 4 15
-name <A2p|LSX|14s->     
+name <A2p|LSX|14s->     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    8.78185
     0.95    11.04991
@@ -3723,14 +3794,14 @@ values
 end
 
 spin-orbit-x 4 12
-name <A2p|LSY|a4s>     
+name <A2p|LSY|a4s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    1.03547
     0.95    8.6591
@@ -3782,14 +3853,14 @@ values
 end
 
 spin-orbit-x 4 13
-name <A2p|LSY|24s>     
+name <A2p|LSY|24s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -7.66876
     0.95    -9.7229
@@ -3839,14 +3910,14 @@ values
 end
 
 spin-orbit-x 5 8
-name <22p|LSX|12s->     
+name <22p|LSX|12s->     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.05    -4.46571
     1.1    -4.07992
@@ -3895,14 +3966,14 @@ values
 end
 
 spin-orbit-x 5 9
-name <22p|LSX|12d>     
+name <22p|LSX|12d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    -1.9444
     1.16    -1.76372
@@ -3948,14 +4019,14 @@ values
 end
 
 spin-orbit-x 5 10
-name <22p|LSX|22d>     
+name <22p|LSX|22d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    3.53292
     1.16    3.55191
@@ -4001,14 +4072,14 @@ values
 end
 
 spin-orbit-x 5 14
-name <22p|LSX|14d>     
+name <22p|LSX|14d>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    8.41774
     1.16    8.32887
@@ -4054,14 +4125,14 @@ values
 end
 
 spin-orbit-x 5 13
-name <22p|LSY|24s>     
+name <22p|LSY|24s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.14    -1.70863
     1.16    -1.82795
@@ -4107,14 +4178,14 @@ values
 end
 
 spin-orbit-x 6 8
-name <32p|LSX|12s->     
+name <32p|LSX|12s->     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.12    -3.76871
     1.14    -3.98789
@@ -4161,14 +4232,14 @@ values
 end
 
 spin-orbit-x 6 13
-name <32p|LSY|24s>     
+name <32p|LSY|24s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    4.06153
     0.95    2.01892
@@ -4218,14 +4289,14 @@ values
 end
 
 spin-orbit-x 7 8
-name <42p|LSX|12s->     
+name <42p|LSX|12s->     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -4.11516
     1.2    -4.34309
@@ -4268,14 +4339,14 @@ values
 end
 
 spin-orbit-x 7 9
-name <42p|LSX|12d>     
+name <42p|LSX|12d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    1.35777
     1.2    1.28292
@@ -4319,14 +4390,14 @@ values
 end
 
 spin-orbit-x 7 10
-name <42p|LSX|22d>     
+name <42p|LSX|22d>     (Diagonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -4.0973
     1.2    -4.4625
@@ -4370,14 +4441,14 @@ values
 end
 
 spin-orbit-x 7 14
-name <42p|LSX|14d>     
+name <42p|LSX|14d>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    5.27164
     1.2    5.26951
@@ -4421,14 +4492,14 @@ values
 end
 
 spin-orbit-x 7 15
-name <42p|LSX|14s->     
+name <42p|LSX|14s->     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    8.02846
     1.2    8.10038
@@ -4472,14 +4543,14 @@ values
 end
 
 spin-orbit-x 7 12
-name <42p|LSY|a4s>     
+name <42p|LSY|a4s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -4.30973
     1.2    -4.05325
@@ -4523,14 +4594,14 @@ values
 end
 
 spin-orbit-x 7 13
-name <42p|LSY|24s>     
+name <42p|LSY|24s>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.18    -0.52949
     1.2    -0.24402
@@ -4574,14 +4645,14 @@ values
 end
 
 spin-orbit-x 8 16
-name <12s-|LSY|b4p>     
+name <12s-|LSY|b4p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.05    -8.25333
     1.1    -9.2395
@@ -4610,14 +4681,14 @@ values
 end
 
 spin-orbit-x 8 17
-name <12s-|LSY|24p>     
+name <12s-|LSY|24p>     (Diagonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.05    2.24566
     1.1    0.85058
@@ -4664,14 +4735,14 @@ values
 end
 
 spin-orbit-x 9 16
-name <12d|LSY|b4p>     
+name <12d|LSY|b4p>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -8.0523
     0.95    -9.10246
@@ -4720,14 +4791,14 @@ values
 end
 
 spin-orbit-x 9 17
-name <12d|LSY|24p>     
+name <12d|LSY|24p>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    7.26105
     0.95    7.21924
@@ -4776,14 +4847,14 @@ values
 end
 
 spin-orbit-x 10 16
-name <22d|LSY|b4p>     
+name <22d|LSY|b4p>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -7.07434
     0.95    -5.35926
@@ -4833,14 +4904,14 @@ values
 end
 
 spin-orbit-x 10 17
-name <22d|LSY|24p>     
+name <22d|LSY|24p>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -3.38408
     0.95    -0.39855
@@ -4888,14 +4959,14 @@ values
 end
 
 spin-orbit-x 11 9
-name <12phi|LSX|12d>     
+name <12phi|LSX|12d>     (Digonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 3 2
 <x|Lz|y>  -3i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.19763
     1.12    -0.19965
@@ -4943,14 +5014,14 @@ values
 end
 
 spin-orbit-x 11 10
-name <12phi|LSX|22d>     
+name <12phi|LSX|22d>     (Digonal Coupling))
 spin 0.5 0.5
 sigma -0.5 0.5
 lambda 3 2
 <x|Lz|y>  -3i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.08023
     1.12    5.19125
@@ -4998,14 +5069,14 @@ values
 end
 
 spin-orbit-x 11 14
-name <12phi|LSX|14d>     
+name <12phi|LSX|14d>     (Digonal Coupling))
 spin 0.5 1.5
 sigma 0.5 1.5
 lambda 3 2
 <x|Lz|y>  -3i -2i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    3.37987
     1.12    -1.83806
@@ -5053,14 +5124,14 @@ values
 end
 
 spin-orbit-x 12 16
-name <a4s|LSX|b4p>     
+name <a4s|LSX|b4p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1    -8.36009
     1.05    -8.05632
@@ -5108,14 +5179,14 @@ values
 end
 
 spin-orbit-x 12 17
-name <a4s|LSX|24p>     
+name <a4s|LSX|24p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     1.05    -1.24086
     1.1    -1.6126
@@ -5162,14 +5233,14 @@ values
 end
 
 spin-orbit-x 13 16
-name <24s|LSX|b4p>     
+name <24s|LSX|b4p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -9.84499
     0.95    -9.63059
@@ -5217,14 +5288,14 @@ values
 end
 
 spin-orbit-x 13 17
-name <24s|LSX|24p>     
+name <24s|LSX|24p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 0 1
 <x|Lz|y>  0 -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    0.65911
     0.95    -0.3414
@@ -5272,14 +5343,14 @@ values
 end
 
 spin-orbit-x 14 16
-name <14d|LSX|b4p>     
+name <14d|LSX|b4p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    9.28343
     1    9.48597
@@ -5328,14 +5399,14 @@ values
 end
 
 spin-orbit-x 14 17
-name <14d|LSX|24p>     
+name <14d|LSX|24p>     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 2 1
 <x|Lz|y>  -2i -i
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -2.46603
     0.95    -1.60744
@@ -5385,14 +5456,14 @@ values
 end
 
 spin-orbit-x 16 15
-name <b4p|LSY|14s->     
+name <b4p|LSY|14s->     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    9.3053
     0.95    9.01468
@@ -5442,14 +5513,14 @@ values
 end
 
 spin-orbit-x 17 15
-name <24p|LSY|14s->     
+name <24p|LSY|14s->     (Digonal Coupling))
 spin 1.5 1.5
 sigma 0.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 units angstrom cm-1
 type grid
-factor 1
+factor i
 values
     0.9    -0.9935
     0.95    -0.41929
@@ -5561,7 +5632,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 10 i
+factor i
 units angstrom ea0
 values
     1.16    -1.07426
@@ -5612,7 +5683,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 2i
+factor i
 units angstrom ea0
 values
     1.12    -0.0583
@@ -5665,7 +5736,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.2    -0.04996
@@ -5713,7 +5784,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    0.76717
@@ -5771,7 +5842,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    -0.04022
@@ -5822,7 +5893,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.12    0.05691
@@ -5875,7 +5946,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.2    -0.09471
@@ -5923,7 +5994,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.14    0.2736
@@ -5959,7 +6030,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    0.07715
@@ -6003,7 +6074,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.12    0.07228
@@ -6049,7 +6120,7 @@ spin 0.5 0.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.2    0.24663
@@ -6091,7 +6162,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    -0.2721
@@ -6142,7 +6213,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    -0.04749
@@ -6193,7 +6264,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    -0.09203
@@ -6244,7 +6315,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.2    -0.19734
@@ -6292,7 +6363,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    -0.25112
@@ -6350,7 +6421,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.16    0.04263
@@ -6401,7 +6472,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.12    -0.02733
@@ -6454,7 +6525,7 @@ spin 0.5 0.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.2    0.03486
@@ -6502,7 +6573,7 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    0.18863
@@ -6560,13 +6631,12 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
-    1.1    -0.08585
-    1.12    -0.11009
-    1.14    -0.11263
-    1.16    0.08145
+    1.1    0.08585
+    1.12    0.11009
+    1.14    0.11263
     1.18    0.50962
     1.2    0.51401
     1.22    0.50321
@@ -6610,18 +6680,17 @@ spin 1.5 1.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
-    0.9    -0.56626
-    0.95    -0.49218
-    1    -0.51522
-    1.05    -0.51976
-    1.1    -0.51848
-    1.12    -0.51657
-    1.14    -0.512
-    1.16    -0.50476
-    1.18    -0.07593
+    0.9    0.56626
+    0.95    0.49218
+    1    0.51522
+    1.05    0.51976
+    1.1    0.51848
+    1.12    0.51657
+    1.14    0.512
+    1.16    0.50476
     1.2    0.11577
     1.22    0.10983
     1.24    0.09994
@@ -6668,7 +6737,7 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    0.19013
@@ -6725,7 +6794,7 @@ spin 1.5 1.5
 lambda 1 2
 <x|Lz|y>  -i -2i
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    0.1795
@@ -6782,7 +6851,7 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     1.1    0.54649
@@ -6831,7 +6900,7 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
     0.9    -0.47158
@@ -6887,14 +6956,14 @@ spin 1.5 1.5
 lambda 1 0
 <x|Lz|y>  -i 0
 type grid
-factor 1
+factor i
 units angstrom ea0
 values
-    0.9    -0.03738
-    0.95    0.00722
-    1    0.26658
-    1.05    0.27675
-    1.1    0.12822
+    0.9    0.03738
+    0.95    -0.00722
+    1    -0.26658
+    1.05    -0.27675
+    1.1    -0.12822
     1.16    -0.06634
     1.18    -0.48443
     1.2    -0.48947
@@ -11437,4 +11506,6 @@ values
     5.5    -6.63032e-06
     6    -1.8512e-06
 end
+
+
 

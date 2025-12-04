@@ -63,7 +63,7 @@ INPUT:
 OUTPUT:
         1) loss: the sum of the absolute second order derivatives of the upper diabatic state.
 """
-function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_init, p_bounds, p)
+function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_init, p_bounds, p, D, i, j)
         #
         ## finite difference (high order accuracy) for matrices
         function FiniteDiff_MatDerivative(x, M, dim, d_order)
@@ -77,7 +77,7 @@ function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_in
                     #
                     dMij = FiniteDifference(x,Mij,d_order)
                     #
-                    dM[:,i,j] = dMij
+                    @inbounds dM[:,i,j] = dMij
                 end
             end
             #
@@ -86,7 +86,7 @@ function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_in
         #
         ## smoothness of the dynamics induced into diabats by U (omitting adiabats)
         function SmoothnessByU(r,U,Va,dim)
-            Vd = adjoint.(U) .* Va .* U
+            Vd = transpose.(U) .* Va .* U
             #
             d2Vd = Vector{SMatrix{dim, dim, Float64}}(FiniteDiff_MatDerivative(r,Vd,dim,2))
             #
@@ -132,6 +132,22 @@ function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_in
                 return sqrt(sum(SmoothSum))
         end
         #
+        function RotMat(angle, i, j, D)
+            U = Matrix{Float64}(I, D, D)
+            #
+            c = cos(angle)
+            s = sin(angle)
+            #
+            ## populate matel
+            U[i, i] = c
+            U[j, j] = c
+            #
+            U[i, j] = -s
+            U[j, i] = s
+            #
+            return U
+        end
+        #
         for (i,par) in enumerate(p)
                 if fixParams[i] == 0.0
                         p[i] = p_init[i]
@@ -156,10 +172,21 @@ function get_loss(r, Lval, units, sub_type, factor, adiabats, f, fixParams, p_in
         end
         #
         ## compute the 2x2 diabatising Matrix
-        U = map(beta -> [cos(beta) -sin(beta) ; sin(beta) cos(beta)], mixing_angle)
+        U = RotMat.(mixing_angle, i, j, D)
+        #
+        # c = cos.(mixing_angle)
+        # s = sin.(mixing_angle)
+        # #
+        # ## populate matel
+        # U[i, i] = c
+        # U[j, j] = c
+        # #
+        # U[i, j] = s
+        # U[j, i] = -s
+        # U = map(beta -> [cos(beta) -sin(beta) ; sin(beta) cos(beta)], mixing_angle)
         #
         ## compute smoothness
-        cost = SmoothnessByU(r,U,adiabats,2)
+        cost = SmoothnessByU(r,U,adiabats,D)
         #
         return round(cost, sigdigits=6)
 end
@@ -316,12 +343,19 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                 ## determine the functional form to fit
                 func = NonAdiabaticCoupling[key].type
                 #
-                ## Generate 2x2 problem
-                a_tmp = Array{Float64}(undef, size(a)[1],2,2) 
-                for k=1:size(a)[1]
-                        a_tmp[k,:,:] = Diagonal(Array([a[k,i,i],a[k,j,j]])) # a[k,:,:] #
+                ## Generate 2x2 problem if potentials
+                if Calculation["method"].regularisation == "potential"
+                    a_tmp = Array{Float64}(undef, size(a)[1],2,2) 
+                    for k=1:size(a)[1]
+                            a_tmp[k,:,:] = Diagonal(Array([a[k,i,i],a[k,j,j]])) # a[k,:,:] #
+                    end
+                    a_tmp = [a_tmp[idx,:,:] for idx=1:lastindex(r)]
+                    #
+                    D_fit = 2
+                else
+                    a_tmp = [a[idx,:,:] for idx=1:lastindex(r)]
+                    D_fit = D
                 end
-                a_tmp = [a_tmp[idx,:,:] for idx=1:lastindex(r)]
                 #
                 ## optimise NAC parameters to create the smoothest PECs for states i,j
                 f = func
@@ -351,7 +385,7 @@ function fit_multi_diabat_2stateApprox(r, a::Array; precision = 1e-6)
                         factor = NonAdiabaticCoupling[key].factor
                         #
                         ## perform optimization
-                        o_ = optimize(p -> get_loss(collect(r), Lval, units, sub_type, factor, a_tmp, func, p_excludeFromFit, p_guess, p_bounds, p), [p_guess...],options) 
+                        o_ = optimize(p -> get_loss(collect(r), Lval, units, sub_type, factor, a_tmp, func, p_excludeFromFit, p_guess, p_bounds, p, D_fit, i, j), [p_guess...],options) 
                         optimisedParameters = Optim.minimizer(o_)
                         #
                         NonAdiabaticCoupling[key].fitted_parameters .= optimisedParameters
@@ -1640,6 +1674,13 @@ function regularise(rgrid::AbstractVector{Float64},
     ## compute matrices on the dense grid
     K_dense_grid  = map( x -> matMix_variable_gamma(rsolve[x], Kf_dense_grid[x], Kb_dense_grid[x], r0, g_morphed_dense_grid, x), collect(1:lastindex(rsolve)))
     #
+    plt = Main.plt
+    plt.figure()
+    for i=1:dim
+        for j=1:dim
+            plt.plot(rsolve,[K[i,j] for K in K_dense_grid])
+        end
+    end
     U_dense_grid  = real(exp.(K_dense_grid))
     #
     dU_dense_grid = FiniteDiff_MatDerivative(rsolve,U_dense_grid,dim,1) # computes derivative of matrix

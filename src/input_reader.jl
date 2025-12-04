@@ -442,7 +442,6 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         #
         factor, is_imaginary = parse_factor(input_values["factor"])
         #
-        println(input_values["id"]," ",input_values["factor"]," ",factor, " ",is_imaginary)
         object = LX(parse.(Int,input_values["id"]),
                     input_values["name"],
                     "LX",
@@ -479,7 +478,6 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
             input_values["Lval"] = parse.(Float64,input_values["Lval"])
         end
         #
-        println("CATS", input_values["id"]," ",input_values["factor"])
         object = NAC(parse.(Int,input_values["id"]),
                      input_values["name"],
                      "NAC",
