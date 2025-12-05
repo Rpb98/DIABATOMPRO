@@ -65,6 +65,15 @@ if Calculation["method"].abinitio_fit == true
 elseif Calculation["method"].abinitio_fit == false
     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
+
+    # for key in keys(Hamiltonian)
+    #     obj = Hamiltonian[key]
+    #     #
+    #     obj.Rval =
+    
+
+    # Calculation["method"].states = 
+    
     # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
     # plt.subplots_adjust(wspace=0, hspace=0)
     # # for i=1:dim

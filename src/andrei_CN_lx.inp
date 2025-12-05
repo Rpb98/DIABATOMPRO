@@ -6,8 +6,8 @@ end
 
 method   
     atoms 12C 14N             
-    states 16 17
-	diabatisation 2-state-approximation
+    states 5 6 7 16 17 
+	diabatisation evolution
 	regularisation lx
     n_evo_grid_points 50000
     r_boundary_condition 1 0 0 0 0 1 0 0 0 0 0 -1 0 0 1 0 

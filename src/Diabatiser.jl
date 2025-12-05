@@ -2349,15 +2349,17 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         S = [string(Int(Si))," ",string(Int(Sj))]
         #
         ## object name
-        name = "< "*string(i)*" | SO | "*string(j)*" >"
+        # name = "< "*string(i)*" | SO | "*string(j)*" >"
         #
-        if i != j
-            println(io, "spin-orbit-x " * string(i) * " " * string(j))
-        else
-            println(io, "spin-orbit " * string(i) * " " * string(j))
-        end
+        # if i != j
+        #     println(io, "spin-orbit-x " * string(i) * " " * string(j))
+        # else
+        #     println(io, "spin-orbit " * string(i) * " " * string(j))
+        # end
         #
-        println(io, "name \"" * name * "\"")
+        println(io, SO.obj_type * " " * string(i) * " " * string(j))
+        #
+        println(io, "name \"" * SO.name * "\"")
         println(io, "spin " * join(spin))
         println(io, "sigma " * join(sigma))
         println(io, "lambda " * join(L))
@@ -2412,10 +2414,10 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         S = [string(Int(Si))," ",string(Int(Sj))]
         #
         ## object name
-        name = "< "*string(i)*" | Lx | "*string(j)*" >"
+        # name = "< "*string(i)*" | Lx | "*string(j)*" >"
         #
         println(io, "Lx " * string(i) * " " * string(j))
-        println(io, "name \"" * name * "\"")
+        println(io, "name \"" * Lx.name * "\"")
         println(io, "spin " * join(spin))
         println(io, "lambda " * join(L))
         # println(io, "mult " * join(S))
@@ -2489,15 +2491,16 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         end
         #
         ## object name
-        name = "< "*string(i)*" | DM | "*string(j)*" >"
+        # name = "< "*string(i)*" | DM | "*string(j)*" >"
         #
-        if i != j
-            println(io, "dipole-x " * string(i) * " " * string(j))
-        else
-            println(io, "dipole " * string(i) * " " * string(j))
-        end
+        # if i != j
+        #     println(io, "dipole-x " * string(i) * " " * string(j))
+        # else
+        #     println(io, "dipole " * string(i) * " " * string(j))
+        # end
+        println(io, dm.obj_type * " " * string(i) * " " * string(j))
         #
-        println(io, "name \"" * name * "\"")
+        println(io, "name \"" * dm.name * "\"")
         # println(io, "symmetry " * join(symmetry))
         println(io, "lambda " * join(L))
         println(io, "mult " * join(S))
