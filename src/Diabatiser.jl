@@ -1299,8 +1299,19 @@ function regularise(rgrid::AbstractVector{Float64},
     end
     #
     ## inversion of sigmoid for gamma
-    function gamma_sigmoid(rref, f, r0)
-        return -log((1/(f))-1)/(rref-r0)
+    function gamma_sigmoid(rref, f, r0, hwhm)
+        #
+        ## Prevent division by zero if rref is exactly r0
+        denom = rref - r0
+        if denom < 1e-6
+            return hwhm
+        else
+            #
+            ## Ensure f is within (0, 1) to avoid log(0) or log(negative)
+            f_clamped = clamp(f, 1e-6, 1 - 1e-6)
+            #
+            return -log((1/f_clamped) - 1) / denom
+        end
     end
     #
     function sigmoid_square(r, rmin, rmax, rref; µ = 1e-2)
@@ -1373,24 +1384,57 @@ function regularise(rgrid::AbstractVector{Float64},
         #
         ## compute position where f & b generator elements vary the quickest
         ∂Kij = [d[i,j] for d in ∂K]
-        deriv_∂Kij  = FiniteDifference(rgrid, ∂Kij, 1)
-        ij_peak_idx = argmax(abs.(deriv_∂Kij))
-        r0 = rgrid[ij_peak_idx]
+        # deriv_∂Kij  = FiniteDifference(rgrid, ∂Kij, 1)
+        # ij_peak_idx = argmax(abs.(deriv_∂Kij))
+        # r0 = rgrid[ij_peak_idx]
+        # #
+        # ## compute HWHM of this for fitting range
+        # deriv_∂Kij_peak   = maximum(abs.(deriv_∂Kij))
+        # # println(deriv_∂Kij_peak,deriv_∂Kij)
+        # #
+        # ##
+        ## compute velocity of difference between lie algebras
+        abs_deriv  = abs.(FiniteDifference(rgrid, ∂Kij, 1))
         #
-        ## compute HWHM of this for fitting range
-        deriv_∂Kij_peak   = maximum(abs.(deriv_∂Kij))
-        # println(deriv_∂Kij_peak,deriv_∂Kij)
+        ## truncare off any noise in derivative at the boundaries
+        boundary_pad = 2
+        abs_deriv[1:boundary_pad] .= 0.0
+        abs_deriv[end-boundary_pad+1:end] .= 0.0
+        #
+        ## find peak acceleraion
+        peak_val, peak_idx = findmax(abs_deriv)
+        r0 = rgrid[peak_idx] # sigmoid center
+        #
+        # plt = Main.plt
         # plt.figure()
-        # plt.plot(r,deriv_∂Kij)
+        # plt.plot(r,abs_deriv)
+        # plt.axvline(r0,color="red")
         #
-        HWHM_end_idx   = ij_peak_idx + (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in deriv_∂Kij[ij_peak_idx:end]]) - 1) - 1
-        HWHM_start_idx = length(reverse(∂Kij[1:ij_peak_idx])) - (findfirst(x -> x == 0, [abs(a) >= 0.5 * deriv_∂Kij_peak for a in reverse(deriv_∂Kij[1:ij_peak_idx]) ]) - 1) + 1
+        ## Find HWHM indices about peak
+        threshold = 0.5 * peak_val
         #
+        ## Search Right
+        r_view = @view abs_deriv[peak_idx:end]
+        idx_r = findfirst(x -> x < threshold, r_view)
+        #
+        ## If no drop found, use the end of the grid
+        HWHM_end_idx = isnothing(idx_r) ? length(abs_deriv) : (peak_idx + idx_r - 1)
+        #
+        ## Search Left
+        l_view = @view abs_deriv[1:peak_idx]
+        idx_l = findfirst(x -> x < threshold, reverse(l_view))
+        ## If no drop found, use the start of the grid
+        HWHM_start_idx = isnothing(idx_l) ? 1 : (peak_idx - idx_l + 1)
+        #
+        ##  Calculate HWHM
+        hwhm = (rgrid[HWHM_start_idx] - rgrid[HWHM_end_idx]) / 2.0
+        #
+        ## define bounds to sigmoid center
         r0_bounds = [rgrid[HWHM_start_idx], rgrid[HWHM_end_idx]]
         #
         ## now estimate mimimum value for gamma
-        g_thresh_left  = [gamma_sigmoid(region[1],     µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[1],     µ, r0[end]), gamma_sigmoid(region[1],     µ, rgrid[HWHM_end_idx])]
-        g_thresh_right = [gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_start_idx]), gamma_sigmoid(region[2],   1-µ, r0[end]), gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_end_idx])]
+        g_thresh_left  = [gamma_sigmoid(region[1],     µ, rgrid[HWHM_start_idx], hwhm), gamma_sigmoid(region[1],     µ, r0[end], hwhm), gamma_sigmoid(region[1],     µ, rgrid[HWHM_end_idx], hwhm)]
+        g_thresh_right = [gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_start_idx], hwhm), gamma_sigmoid(region[2],   1-µ, r0[end], hwhm), gamma_sigmoid(region[2],   1-µ, rgrid[HWHM_end_idx], hwhm)]
         #
         g0 = maximum([g_thresh_left..., g_thresh_right...])
         #
@@ -1444,7 +1488,7 @@ function regularise(rgrid::AbstractVector{Float64},
             else
                 push!(r0, mean(region))
                 push!(r0_bounds, [-1e100,1e100])
-                push!(g0, 1e-16)
+                push!(g0, 0.0)
             end
         end
     end
@@ -2357,7 +2401,17 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         #     println(io, "spin-orbit " * string(i) * " " * string(j))
         # end
         #
-        println(io, SO.obj_type * " " * string(i) * " " * string(j))
+        if all([Li,Lj,(Si-1)/2,(Sj-1)/2] .== 0) # at least have spin or orbit angular momentum
+            println("CAUTION: TRYING TO SAVE SPIN-ORBIT FOR A SINGLET SIGMA - SINGLET SIGMA COUPLING (should be zero)")
+        end
+        #
+        if (Si == Sj) & (Li == Lj)
+            println(io,"spin-orbit " * string(i) * " " * string(j))
+        else
+            println(io,"spin-orbit-x " * string(i) * " " * string(j))
+        end
+        #
+        # println(io, SO.obj_type * " " * string(i) * " " * string(j))
         #
         println(io, "name \"" * SO.name * "\"")
         println(io, "spin " * join(spin))
@@ -2498,7 +2552,15 @@ function save_diabatisation(Objects, Diabatic_Objects, diabMethod, input_propert
         # else
         #     println(io, "dipole " * string(i) * " " * string(j))
         # end
-        println(io, dm.obj_type * " " * string(i) * " " * string(j))
+        #
+        if (Si == Sj) # no spin change
+            if  (Li == Lj)
+                println(io,"dipole " * string(i) * " " * string(j))
+            else
+                println(io,"dipole-x " * string(i) * " " * string(j))
+            end
+        end
+        # println(io, dm.obj_type * " " * string(i) * " " * string(j))
         #
         println(io, "name \"" * dm.name * "\"")
         # println(io, "symmetry " * join(symmetry))

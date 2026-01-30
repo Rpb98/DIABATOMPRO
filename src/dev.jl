@@ -36,7 +36,7 @@ println("a.u. of dipole ea0  =       2.541746363812 Debye")
 print("\n")
 #      
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN INPUT READER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-read_file("./andrei_CN_lx.inp")
+read_file("../Supplementary/CN_4_states.inp")
 #~~~~~~~~~~~~~~~~~~~~~~~~~ RUN HAMILTONIAN BUILDER ~~~~~~~~~~~~~~~~~~~~~~~~#
 include("Build_Hamiltonian_Matrix.jl")
 Objects = build_hamiltonian_objects(Calculation, 
@@ -56,12 +56,45 @@ r = LinRange(Calculation["grid"].range[1],
 
 r  = collect(r)
 
+
+# fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+# plt.subplots_adjust(wspace=0, hspace=0)
+
+# states = [1,2,3,6]
+# plt.figure()
+# for i in states
+#     for j in states
+#         if i <= j
+#             if [i,j] in keys(SpinOrbit)
+#                 #
+
+#                 SO = SpinOrbit[[i,j]] #Hamiltonian[("spin-orbit",[i,j])]
+#                 #
+#                 Li = Vi.lambda
+#                 #
+#                 Si = Vi.mult
+#                 #
+#                 Lj = Vj.lambda
+#                 #
+#                 Sj = Vj.mult
+#                 #
+#                 if (Si == Sj) & (Li == Lj)
+#                     axs[1,1].plot(r,Objects["spin-orbit"][:,i,i],label="<" * string(i) * "|SOZ|" * string(j)*">")
+#                 else
+#                     axs[1,1].plot(r,Objects["spin-orbit"][:,i,i],label="<" * string(i) * "|SOX|" * string(j)*">")
+#                 end
+#             end
+#         end
+#     end
+# end
+# plt.legend()
+
+
 # compute vibronic energies and wavefunctions for a non-rotating molecule if
 # the 'vibronic_solver' key is in Calculation
 # run the diabatiser
 if Calculation["method"].abinitio_fit == true
     fit_abinitio()
-
 elseif Calculation["method"].abinitio_fit == false
     U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
@@ -126,43 +159,45 @@ end
 
 fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
 plt.subplots_adjust(wspace=0, hspace=0)
-# for i=1:dim
-#     if i in Calculation["method"].states
-#         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-#         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-#     end
-# end
-#
-
-axs[1,1].plot(r,-Diabatic_Objects["lx"][:,16,14],label="dia 13|"*string(16))
-axs[1,1].plot(r,-Objects["lx"][:,16,14],"--",label="adi 13|"*string(16))
-#
-axs[1,1].plot(r,-Diabatic_Objects["lx"][:,17,14],label="dia 13|"*string(17))
-axs[1,1].plot(r,-Objects["lx"][:,17,14],"--",label="adi 13|"*string(17))
-
-#
-axs[1,1].legend()
-#
 for i=1:dim
-    for j=i+1:dim
-        if (i in Calculation["method"].states)&(j in Calculation["method"].states)
-            axs[2,1].plot(r,Objects["nac"][:,i,j])
-            # if (lowercase(Calculation["method"].diabatisation) == "evolution")
-            #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
-            # end
-        end
+    if i in Calculation["method"].states
+        axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+        axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
     end
 end
-axs[2,1].set_xlabel("Bond Length, Angstrom")
-axs[2,1].set_ylabel("NAC, 1/Angstrom")
-axs[1,1].set_ylabel("Potential, cm-1")
-axs[2,1].legend()
+
+axs[2,1].plot(r,Objects["nac"][:,1,2])
+#
+
+# axs[1,1].plot(r,-Diabatic_Objects["lx"][:,16,14],label="dia 13|"*string(16))
+# axs[1,1].plot(r,-Objects["lx"][:,16,14],"--",label="adi 13|"*string(16))
+# #
+# axs[1,1].plot(r,-Diabatic_Objects["lx"][:,17,14],label="dia 13|"*string(17))
+# axs[1,1].plot(r,-Objects["lx"][:,17,14],"--",label="adi 13|"*string(17))
+
+# #
+# axs[1,1].legend()
+# #
+# for i=1:dim
+#     for j=i+1:dim
+#         if (i in Calculation["method"].states)&(j in Calculation["method"].states)
+#             axs[2,1].plot(r,Objects["nac"][:,i,j])
+#             # if (lowercase(Calculation["method"].diabatisation) == "evolution")
+#             #     axs[2,1].plot(r,[Objects["regularised_nac"][idx][i,j] for idx=1:lastindex(r)],"--",label="reg $i $j")
+#             # end
+#         end
+#     end
+# end
+# axs[2,1].set_xlabel("Bond Length, Angstrom")
+# axs[2,1].set_ylabel("NAC, 1/Angstrom")
+# axs[1,1].set_ylabel("Potential, cm-1")
+# axs[2,1].legend()
 
 
 # print(Objects["potential"][1,:,:])
 
 
-# save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "CN", special_name = "save_test")
+# save_diabatisation(Objects, Diabatic_Objects, lowercase(Calculation["method"].diabatisation), input_properties, "O2_3Pi", special_name = "NACs ")
 
 # plt.figure()
 # plt.plot(r,Objects["spin-orbit"][:,1,3],"--")
