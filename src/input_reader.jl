@@ -107,6 +107,9 @@ function initialise_input_parameters(line::String)
     ## Define a dictionary to hold the input values and initialise some default parameters
     input_values = Dict()
     #
+    ## grid block
+    input_values["interpolation_type"] = "cubic"
+    #
     input_values["factor"] = "1.0"
     #
     input_values["units"]  = ("angstrom", "au")
@@ -263,7 +266,7 @@ function create_object_instance(input_values::Dict{Any,Any}, object_key)
         #
         grid = Grid(parse(Int,input_values["npoints"]),
                           parse.(Float64,input_values["range"]),
-                          input_values["interpolation_type"]
+                          lowercase(input_values["interpolation_type"])
                           )
         #
         Calculation["grid"] = grid

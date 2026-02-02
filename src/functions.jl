@@ -973,25 +973,51 @@ function ComputeProperty(self; custom_grid = false, evolution_grid = false)
     if self.type == "grid"                                      # grid based PEC
         local r, spline, f_interpolated
         #
-        # DEFAULT IS CUBIC FOR NOW *********************************************
-		## spline the property onto the defined grid
-        # if occursin("linear",Calculation["grid"].interpolation_type)
-        #     spline = LinearInterpolation(self.Lval, self.Rval)  
-        # elseif occursin("quadratic",Calculation["grid"].interpolation_type)
-        #     spline = interpolate((self.Lval,), self.Rval, Gridded(Quadratic()))
-        # elseif occursin("cubic",Calculation["grid"].interpolation_type)
-        #     spline = Spline1D(self.Lval, self.Rval)                
-            #spline = CubicSplineInterpolation(self.Lval, self.Rval)
-        # elseif occursin("quintic",Calculation["grid"].interpolation_type)
-        #     spline = Fun(self.Lval, self.Rval, kind="quintic")
-        # end              
-        #
         ## convert units
         x, f = unitConversion(self.Lval, self.Rval, self.obj_type, self.units)
+        #
+        # DEFAULT IS CUBIC FOR NOW *********************************************
+		## spline the property onto the defined grid
+        if occursin("linear",Calculation["grid"].interpolation_type)
+            spline = Spline1D(x, f, k=1, bc="extrapolate")
+            f_interpolated = spline(r)
+        elseif occursin("quadratic",Calculation["grid"].interpolation_type)
+            spline = Spline1D(x, f, k=2, bc="extrapolate")
+            f_interpolated = spline(r)
+        elseif occursin("cubic",Calculation["grid"].interpolation_type)
+            spline = Spline1D(x, f, k=3, bc="extrapolate")
+            f_interpolated = spline(r)
+        elseif occursin("quartic",Calculation["grid"].interpolation_type)
+            spline = Spline1D(x, f, k=4, bc="extrapolate")
+            f_interpolated = spline(r)
+        elseif occursin("quintic",Calculation["grid"].interpolation_type)
+            spline = Spline1D(x, f, k=5, bc="extrapolate")
+            f_interpolated = spline(r)
+        # elseif occursin("sextic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(x, f, k=6, bc="extrapolate")
+        # elseif occursin("septic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(x, f, k=7, bc="extrapolate")
+        # elseif occursin("octic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(x, f, k=8, bc="extrapolate")
+        # elseif occursin("nonic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(x, f, k=9, bc="extrapolate")
+        # elseif occursin("decic",Calculation["grid"].interpolation_type)
+        #     spline = Spline1D(x, f, k=10, bc="extrapolate")
+        #
+        ## other types of interpolators
+        elseif occursin("pchip",Calculation["grid"].interpolation_type)
+            spline = PCHIPInterpolation.Interpolator(x, f, extrapolate = true)
+            f_interpolated = spline.(r)
+        elseif occursin("b-spline",Calculation["grid"].interpolation_type)      # terrible at the moment, dont use!
+            X = copy(hcat(x,f)')
+            # X = [x'; Float64.(f)']
+            spline = Dierckx.ParametricSpline(X,s=0.0, bc="extrapolate")
+            f_interpolated = spline(r)[2,:]
+        end             
 		#
         ## compute the interpolated object curve on the bonds grid
-		spline = Spline1D(x, f, k=3, bc="extrapolate")
-        f_interpolated = spline(r)
+		# spline = Spline1D(x, f, k=3, bc="extrapolate")
+        # f_interpolated = spline(r)
         #
         ## if evolution is being done then the interpolated grid needs to go to 
         ## 0 either side of the defined grid.

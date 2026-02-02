@@ -57,6 +57,17 @@ r = LinRange(Calculation["grid"].range[1],
 r  = collect(r)
 
 
+plt.figure()
+for i=1:dim
+    if i in Calculation["method"].states
+        # axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+        plt.plot(Hamiltonian[("poten",i)].Lval, Hamiltonian[("poten",i)].Rval,"k.")
+        plt.plot(r,Objects["potential"][:,i,i])
+    end
+end
+plt.ylim(50000,90000)
+
+
 # fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
 # plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -96,7 +107,7 @@ r  = collect(r)
 if Calculation["method"].abinitio_fit == true
     fit_abinitio()
 elseif Calculation["method"].abinitio_fit == false
-    U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
+    # U, dU, UdU, K_Matrix, Diabatic_Objects, input_properties, residual_kinetic_energy = run_diabatiser(lowercase(Calculation["method"].diabatisation))
    
 
     # for key in keys(Hamiltonian)
@@ -157,17 +168,20 @@ elseif Calculation["method"].abinitio_fit == false
 end
 
 
-fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
-plt.subplots_adjust(wspace=0, hspace=0)
-for i=1:dim
-    if i in Calculation["method"].states
-        axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
-        axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
-    end
-end
+# fig, axs = plt.subplots(2,1,sharex=true,figsize=[3,5])
+# plt.subplots_adjust(wspace=0, hspace=0)
+# for i=1:dim
+#     if i in Calculation["method"].states
+#         axs[1,1].plot(r,Diabatic_Objects["potential"][:,i,i],label="V"*string(i))
+#         axs[1,1].plot(r,Objects["potential"][:,i,i],"--")
+#     end
+# end
 
-axs[2,1].plot(r,Objects["nac"][:,1,2])
+# axs[2,1].plot(r,Objects["nac"][:,1,2])
 #
+
+
+
 
 # axs[1,1].plot(r,-Diabatic_Objects["lx"][:,16,14],label="dia 13|"*string(16))
 # axs[1,1].plot(r,-Objects["lx"][:,16,14],"--",label="adi 13|"*string(16))

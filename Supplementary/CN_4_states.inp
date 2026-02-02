@@ -1,7 +1,7 @@
 grid                
   npoints 300
   range   0.9 6.0           
-  interpolation_type  cubic
+  interpolation_type  pchip
 end
 
 method   
