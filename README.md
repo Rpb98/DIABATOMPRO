@@ -230,7 +230,7 @@ end
 ```
 * `npoints` - is the number of equally spaced points defining the grid which properties are interpolated onto.
 * `range` - the range (in any unit) of the bond length grid, in this case the diatom bond lengths start at 0.7 and end at 3.7 with 2001 equally spaced points in between.
-* `interpolation_type` - currently only cubic has been implemented. Quintic interpolation is currently under development.
+* `interpolation_type` - current interpolation types include: `linear`, `quadratic`, `cubic`, `quartic`, `quintic` from the `Dierckx.jl` library and `PCHIP` (Piecewise Cubic Hermite Interpolating Polynomial) from the `PCHIPInterpolation.jl` library.  
 
 #### The Method Block
 The calculations meta-variables can be defined in the following block:
